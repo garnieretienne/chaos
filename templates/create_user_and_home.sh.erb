@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# Create the user if not present in /etc/passwd
+if ! grep "^<%= @name %>:" /etc/passwd > /dev/null; then
+  useradd --home <%= @home %> --create-home --shell /bin/bash --groups deploy --system --comment "Application '<%= @name %>' user" <%= @name %>
+fi

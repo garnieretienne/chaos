@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+# If repo is not already declared in gitolite conf, add it and commit change
+if ! grep "^repo <%= @name %>" <%= GITOLITE_ADMIN_DIR %>/conf/gitolite.conf > /dev/null; then
+  repo_config=$(cat << EOF
+
+repo <%= @name %>
+    RW+     =   <%= @server.user %>
+EOF
+)
+
+  echo "$repo_config" >> "<%= GITOLITE_ADMIN_DIR %>/conf/gitolite.conf"
+
+  cd <%= GITOLITE_ADMIN_DIR %>
+  git add <%= GITOLITE_ADMIN_DIR %>/conf/gitolite.conf
+  git commit -m "create repository for app <%= @name %>"
+  git push
+fi

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# If the user pub key is not already declared, add it to gitolite managed key.
+if ! diff /root/admin_key/<%= user %>.pub <%= GITOLITE_ADMIN_DIR %>/keydir/<%= user %>.pub > /dev/null; then
+  cp /root/admin_key/<%= user %>.pub <%= GITOLITE_ADMIN_DIR %>/keydir/<%= user %>.pub
+  chown git:git <%= GITOLITE_ADMIN_DIR %>/keydir/<%= user %>.pub
+  sudo -u git -H bash -c "cd <%= GITOLITE_ADMIN_DIR %>; git add keydir/<%= user %>.pub; git commit -m "add git user <%= user %>"; git push origin master"
+fi

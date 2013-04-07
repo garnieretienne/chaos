@@ -1,0 +1,34 @@
+#!/bin/bash
+set -e
+
+# Patch the profile file to load environment from the last deployed version of the app.
+script=$(cat << EOF
+
+# If a package is running, load the app environment
+if [ -d "\$HOME/packages/current" ]; then
+
+  export HOME="\$HOME/packages/current"
+  version=\$(basename \$(readlink \$HOME))
+  echo "Moving to deployed version (\$version)"
+
+  if [ -d \$HOME/.profile.d/ ]; then
+    source \$HOME/.profile.d/*
+  fi
+
+  if [ -f "\$HOME/app_env" ]; then
+    while read line; do
+      if [[ "\$line" == *=* ]]; then
+        export \$line
+      fi
+    done < "\$HOME/app_env"
+  fi
+
+  cd \$HOME
+fi
+EOF
+)
+
+# Verify the .profile file is not already patched before writing in.
+if ! cat <%= APP_DIR %>/<%= @name %>/.profile | grep 'If a package is running, load the app environment' > /dev/null ; then
+  echo "$script" >> <%= APP_DIR %>/<%= @name %>/.profile
+fi

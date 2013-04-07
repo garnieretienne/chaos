@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+require 'chaos'
+
+begin
+  Chaos::CLI.start
+rescue Chaos::Error => e
+  print "\r\n\n"
+  display e.message, :error
+  display e.backtrace.join("\n")
+  Process.exit(1)
+rescue Chaos::RemoteError => e
+  print "\r\n\n"
+  display e.message, :error
+  display "COMMAND: #{e.command}", :remote
+  display "EXIT STATUS: #{e.exit_status}", :remote
+  display "STDOUT:\n #{e.stdout}", :remote unless e.stdout.empty?
+  display "STDERR:\n #{e.stderr}", :remote unless e.stderr.empty?
+  display e.backtrace.join("\n")
+  Process.exit(1)
+end  

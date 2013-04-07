@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+if ! [ -f <%= VHOST_DIR %>/<%= @name %> ]; then
+  hermes create <%= @name %> $(cat <%= @home %>/.domain) --upstream 127.0.0.1:8080 --vhost-dir <%= VHOST_DIR %>"
+fi
