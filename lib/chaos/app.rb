@@ -64,7 +64,7 @@ module Chaos
             'already declared'
           else
             stdout, stderr, exit_status, script_path = @server.script ssh, Chaos::Helpers.script("create_route.sh", binding), sudo: true, as: ROUTER_USER
-            raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), "Cannot write the route config file" if exit_status != 0
+            raise Chaos::RemoteError.new(stdout, stderr, exit_status, script_path), "Cannot write the route config file" if exit_status != 0
             'done'
           end
         end
