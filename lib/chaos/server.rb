@@ -85,9 +85,11 @@ module Chaos
           raise Chaos::Error, "Cannot upload the admin key ('#{home}/.ssh/id_rsa.pub' => '/root/admin_key/#{user}.pub')" unless key_sent
         end
 
-        # Install pre-requiste (git, curl)
-        display "Install dependencies (git, curl)" do
-          dependencies = ['git', 'curl', 'sudo']
+        # Install dependencies
+        dependencies = ['git', 'curl', 'sudo']
+        display "Install dependencies #{dependencies.join(', ')}" do
+          stdout, stderr, exit_status, command = exec ssh, "apt-get update"
+          raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), "Cannot update the package management repos" if exit_status != 0
           stdout, stderr, exit_status, command = exec ssh, "apt-get install --assume-yes #{dependencies.join(' ')}"
           raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), "Cannot install dependencies (#{dependencies.join(' ')})" if exit_status != 0
         end
