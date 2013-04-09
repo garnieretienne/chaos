@@ -1,45 +1,20 @@
 require 'thor'
+require 'chaos/commands'
+# require 'cli/app'
+# require 'cli/domains'
 
 module Chaos
 
   class CLI < Thor
 
-    class Server < Thor
-      namespace :server
+    desc 'server', 'Manage server configuration'
+    subcommand 'server', Chaos::Commands::Server
 
-      desc "server:bootstrap", "Bootstrap a server"
-      method_option :ssh, aliases: "-s", desc: 'ssh url used to connect to the server', required: true
-      def bootstrap
-        user = ENV['USER']
-        server = Chaos::Server.new options[:ssh]
-        server.bootstrap
-        server.run_chef true
-        server.register_git_user user
-        display "Done.", :topic
-        display "Default passwords set for admin users by chef is their user names."
-        display "Connect to the server to change it ('ssh #{user}@#{server.host}') before doing anything else."
-      end
+    desc 'app', 'Manage app deployment configuration'
+    subcommand 'app', Chaos::Commands::App
 
-      desc "server:update", "Update a server configuration running chef"
-      method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
-      def update
-        server = Chaos::Server.new "ssh://#{options[:server]}"
-        server.run_chef
-      end
-    end
+    desc 'domains', 'Manage domains attached to applications'
+    subcommand 'domains', Chaos::Commands::Domains
 
-    class App < Thor
-      namespace :app
-
-      desc "app:create", "Create an application on the server"
-      method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
-      method_option :name, aliases: "-n", desc: 'name of the app'
-      def create
-        server = Chaos::Server.new "ssh://#{options[:server]}"
-        name = options[:name] || File.basename(Dir.pwd)
-        app = Chaos::App.new name
-        app.create server
-      end
-    end
   end
 end
