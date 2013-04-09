@@ -76,15 +76,13 @@ module Chaos
         
         # Update hostname on server
         display "Setup server hostname (#{hostname})" do
-          stdout, stderr, exit_status, script_path = script Chaos::Helpers.script("hostname.sh", binding)
-          raise Chaos::RemoteError.new(stdout, stderr, exit_status, script_path), "Host name or fully qualified domain name cannot be correctly configured" if exit_status != 0
+          script! Chaos::Helpers.script("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
         end
 
         # Upload public key for current user
         display "Upload public key for '#{user}' user" do
-          stdout, stderr, exit_status, command = exec "mkdir -p /root/admin_key"
-          raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), "Cannot create the admin public key folder (/root/admin_key)" if exit_status != 0
           raise Chaos::Error, "No public key available for the current user ('#{home}/.ssh/id_rsa.pub' do not exist)" unless File.exist? "#{home}/.ssh/id_rsa.pub"
+          exec! "mkdir -p /root/admin_key", error_msg: "Cannot create the admin public key folder (/root/admin_key)"
           key_sent = send_file "#{home}/.ssh/id_rsa.pub", "/root/admin_key/#{user}.pub"
           raise Chaos::Error, "Cannot upload the admin key ('#{home}/.ssh/id_rsa.pub' => '/root/admin_key/#{user}.pub')" unless key_sent
         end
@@ -92,20 +90,17 @@ module Chaos
         # Install dependencies
         dependencies = ['git', 'curl', 'sudo']
         display "Install dependencies #{dependencies.join(', ')}" do
-          stdout, stderr, exit_status, command = exec "apt-get update"
-          raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), "Cannot update the package management repos" if exit_status != 0
-          stdout, stderr, exit_status, command = exec "apt-get install --assume-yes #{dependencies.join(' ')}"
-          raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), "Cannot install dependencies (#{dependencies.join(' ')})" if exit_status != 0
+          exec! "apt-get update", error_msg: "Cannot update the package management repos"
+          exec! "apt-get install --assume-yes #{dependencies.join(' ')}", error_msg: "Cannot install dependencies (#{dependencies.join(' ')})"
         end
 
         # Install chef-solo
         display "Install Chef solo if needed" do
-          stdout, stderr, exit_status = exec "which chef-solo"
+          exit_status, stdout = exec "which chef-solo"
           if exit_status == 0
             'already installed'
           else
-            stdout, stderr, exit_status, command = exec "curl -L https://www.opscode.com/chef/install.sh | sudo bash"
-            raise Chaos::RemoteError.new(stdout, stderr, exit_status, command), 'Cannot install chef' if exit_status != 0
+            exec! "curl -L https://www.opscode.com/chef/install.sh | sudo bash", error_msg: 'Cannot install chef'
             'done'
           end
         end
@@ -139,17 +134,16 @@ module Chaos
     end
 
     def register_git_user(user)
+
       display "Register git user '#{user}'...", :topic
       display "Import user key into gitolite" do
         connect do
-          stdout, stderr, exit_status, script_path = script Chaos::Helpers.script("register_git_user.sh", binding)
-          raise Chaos::RemoteError.new(stdout, stderr, exit_status, script_path), "Cannot register '#{user}' private key into gitolite admin repo" if exit_status != 0
+          script! Chaos::Helpers.script("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
         end
       end
     end
 
     def exec(cmd, options={}, &block)
-
       raise Chaos::Error, "No active connection to the server" if !@ssh
       
       stdout, stderr, exit_status = "", "", nil
@@ -181,7 +175,14 @@ module Chaos
       end
 
       @ssh.loop
-      return stdout, stderr, exit_status, cmd
+      return exit_status, stdout, stderr, cmd
+    end
+
+    def exec!(cmd, options={})
+      exit_status, stdout, stderr, cmd = exec(cmd, options)
+      error_msg = options[:error_msg] || "The following command exited with an error"
+      raise Chaos::RemoteError.new(stdout, stderr, exit_status, cmd), error_msg if exit_status != 0
+      return stdout
     end
 
     # Script: upload a script and run it
@@ -189,8 +190,7 @@ module Chaos
     def script(source, options={}, &block)
 
       remote_file = "#{TMP_DIR}/#{Time.new.to_i}"
-      stdout, stderr, exit_status = exec "cat << EOS > #{remote_file} && chmod +x #{remote_file} \n#{Chaos::Helpers.escape_bash(source)}\nEOS\n"
-      raise ChaosError, "Couldn't write script on the remote file (#{remote_file})" if exit_status != 0
+      exec! "cat << EOS > #{remote_file} && chmod +x #{remote_file} \n#{Chaos::Helpers.escape_bash(source)}\nEOS\n", error_msg: "Couldn't write script on the remote file (#{remote_file})"
 
       stdout, stderr, exit_status = "", "", nil
 
@@ -199,15 +199,27 @@ module Chaos
           block.call(ch, stream, data, remote_file)
         end
       else
-        stdout, stderr, exit_status = exec remote_file, sudo: options[:sudo], as: options[:as]
+        exit_status, stdout, stderr = exec remote_file, sudo: options[:sudo], as: options[:as]
       end
 
-      return stdout, stderr, exit_status, remote_file
+      return exit_status, stdout, stderr, remote_file
+    end
+
+    def script!(source, options={})
+      exit_status, stdout, stderr, script_path = script(source, options)
+      error_msg = options[:error_msg] || "The following script exited with an error"
+      raise Chaos::RemoteError.new(stdout, stderr, exit_status, script_path), error_msg if exit_status != 0
+      return stdout
     end
 
     # Execute a psql command with root access
     def psql(cmd)
       exec "psql --command \"#{cmd}\"", as: 'postgres'
+    end
+
+    def psql!(cmd, options)
+      options[:as] = 'postgres'
+      exec! "psql --command \"#{cmd}\"", options
     end
   end
 end
