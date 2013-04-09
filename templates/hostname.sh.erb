@@ -8,7 +8,7 @@ echo <%= hostname %> > /etc/hostname
 # Add system IP to host file to define hostname and fqdn (only if not exist)
 ip=$(/sbin/ifconfig  | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
 if ! cat /etc/hosts | grep $ip > /dev/null; then
-  echo "${ip} <%= fqdn %> <%= hostname %>" >> /etc/hosts
+  echo -e "${ip} <%= fqdn %> <%= hostname %>\n$(cat /etc/hosts)" > /etc/hosts
 fi
 
 # Exit status

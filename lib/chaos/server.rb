@@ -6,11 +6,11 @@ require 'io/console'
 module Chaos
 
   class Server
+    attr_reader :host, :port, :user
+
     TMP_DIR = "/tmp"
     GITOLITE_ADMIN_DIR = "/srv/git/gitolite-admin"
     CHAOS_CHEF_REPO = "git://github.com/garnieretienne/chaos-chef-repo.git"
-
-    attr_reader :host, :port, :user
 
     def initialize(ssh_uri)
       uri = URI(ssh_uri)
@@ -33,7 +33,7 @@ module Chaos
         system "stty -echo"
         display "Enter password for '#{@user}' on '#{@host}': ", :ask do
           @password = STDIN.gets.chomp
-          '********'
+          '******'
         end
       ensure
         system "stty echo"
@@ -70,13 +70,12 @@ module Chaos
       user = ENV['USER']
       home = ENV['HOME']
 
-      display "Bootstrapping #{fqdn}...", :topic
-
       connect do
         
         # Update hostname on server
         display "Setup server hostname (#{hostname})" do
           script! Chaos::Helpers.script("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
+          'done'
         end
 
         # Upload public key for current user
@@ -85,6 +84,7 @@ module Chaos
           exec! "mkdir -p /root/admin_key", error_msg: "Cannot create the admin public key folder (/root/admin_key)"
           key_sent = send_file "#{home}/.ssh/id_rsa.pub", "/root/admin_key/#{user}.pub"
           raise Chaos::Error, "Cannot upload the admin key ('#{home}/.ssh/id_rsa.pub' => '/root/admin_key/#{user}.pub')" unless key_sent
+          'done'
         end
 
         # Install dependencies
@@ -92,6 +92,7 @@ module Chaos
         display "Install dependencies #{dependencies.join(', ')}" do
           exec! "apt-get update", error_msg: "Cannot update the package management repos"
           exec! "apt-get install --assume-yes #{dependencies.join(' ')}", error_msg: "Cannot install dependencies (#{dependencies.join(' ')})"
+          'done'
         end
 
         # Install chef-solo
@@ -110,7 +111,6 @@ module Chaos
     # Display chef output (topic and error only)
     # root must be true if no sudo is needed
     def run_chef(root=false)
-      display "Configure services using Chef...", :topic
       connect do
         stdout, stderr = "", ""
         script Chaos::Helpers.script("chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
@@ -134,8 +134,6 @@ module Chaos
     end
 
     def register_git_user(user)
-
-      display "Register git user '#{user}'...", :topic
       display "Import user key into gitolite" do
         connect do
           script! Chaos::Helpers.script("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"

@@ -1,7 +1,5 @@
 require 'thor'
 require 'chaos/commands'
-# require 'cli/app'
-# require 'cli/domains'
 
 module Chaos
 
@@ -15,6 +13,5 @@ module Chaos
 
     desc 'domains', 'Manage domains attached to applications'
     subcommand 'domains', Chaos::Commands::Domains
-
   end
 end
