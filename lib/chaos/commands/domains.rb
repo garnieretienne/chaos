@@ -3,6 +3,7 @@ module Chaos
   class Commands
 
     class Domains < Thor
+      include Chaos::Helpers   
 
       desc "add DOMAIN", "Add a domain to the app"
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
@@ -15,7 +16,7 @@ module Chaos
         name = options[:name] || File.basename(Dir.pwd)
         app = Chaos::App.new name, server
 
-        display "Add new domains to '#{app.name}' on '#{app.server}'...", :topic
+        display_ "Add new domains to '#{app.name}' on '#{app.server}'...", :topic
         app.add_domain domain
       end
 
@@ -28,7 +29,7 @@ module Chaos
         name = options[:name] || File.basename(Dir.pwd)
         app = Chaos::App.new name, server
 
-        display "Domains configured for '#{app.name}' on '#{app.server}':", :topic
+        display_ "Domains configured for '#{app.name}' on '#{app.server}':", :topic
         app.domains
       end
 
@@ -43,7 +44,7 @@ module Chaos
         name = options[:name] || File.basename(Dir.pwd)
         app = Chaos::App.new name, server
 
-        display "Removing domains for '#{app.name}' on '#{app.server}'...", :topic
+        display_ "Removing domains for '#{app.name}' on '#{app.server}'...", :topic
         app.remove_domain domain
       end      
     end   

@@ -2,10 +2,12 @@ require 'net/ssh'
 require 'net/scp'
 require 'uri'
 require 'io/console'
+require 'chaos/helpers'
 
 module Chaos
 
   class Server
+    include Chaos::Helpers
     attr_reader :host, :port, :user
 
     TMP_DIR = "/tmp"
@@ -31,7 +33,7 @@ module Chaos
     def ask_user_password
       begin
         system "stty -echo"
-        display "Enter password for '#{@user}' on '#{@host}': ", :ask do
+        display_ "Enter password for '#{@user}' on '#{@host}': ", :ask do
           @password = STDIN.gets.chomp
           '******'
         end
@@ -73,13 +75,13 @@ module Chaos
       connect do
         
         # Update hostname on server
-        display "Setup server hostname (#{hostname})" do
-          script! Chaos::Helpers.script("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
+        display_ "Setup server hostname (#{hostname})" do
+          script! script("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
           'done'
         end
 
         # Upload public key for current user
-        display "Upload public key for '#{user}' user" do
+        display_ "Upload public key for '#{user}' user" do
           raise Chaos::Error, "No public key available for the current user ('#{home}/.ssh/id_rsa.pub' do not exist)" unless File.exist? "#{home}/.ssh/id_rsa.pub"
           exec! "mkdir -p /root/admin_key", error_msg: "Cannot create the admin public key folder (/root/admin_key)"
           key_sent = send_file "#{home}/.ssh/id_rsa.pub", "/root/admin_key/#{user}.pub"
@@ -89,14 +91,14 @@ module Chaos
 
         # Install dependencies
         dependencies = ['git', 'curl', 'sudo']
-        display "Install dependencies #{dependencies.join(', ')}" do
+        display_ "Install dependencies #{dependencies.join(', ')}" do
           exec! "apt-get update", error_msg: "Cannot update the package management repos"
           exec! "apt-get install --assume-yes #{dependencies.join(' ')}", error_msg: "Cannot install dependencies (#{dependencies.join(' ')})"
           'done'
         end
 
         # Install chef-solo
-        display "Install Chef solo if needed" do
+        display_ "Install Chef solo if needed" do
           exit_status, stdout = exec "which chef-solo"
           if exit_status == 0
             'already installed'
@@ -108,15 +110,15 @@ module Chaos
       end
     end
 
-    # Display chef output (topic and error only)
+    # display_ chef output (topic and error only)
     # root must be true if no sudo is needed
     def run_chef(root=false)
       connect do
         stdout, stderr = "", ""
-        script Chaos::Helpers.script("chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
+        script script("chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
 
           data.each_line do |line|
-            display line if line =~ /^(\s\s\*.*|\w.*)/
+            display_ line if line =~ /^(\s\s\*.*|\w.*)/
             case stream
             when :stdout
               stdout << data
@@ -134,9 +136,9 @@ module Chaos
     end
 
     def register_git_user(user)
-      display "Import user key into gitolite" do
+      display_ "Import user key into gitolite" do
         connect do
-          script! Chaos::Helpers.script("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
+          script! script("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
         end
       end
     end
@@ -188,7 +190,7 @@ module Chaos
     def script(source, options={}, &block)
 
       remote_file = "#{TMP_DIR}/#{Time.new.to_i}"
-      exec! "cat << EOS > #{remote_file} && chmod +x #{remote_file} \n#{Chaos::Helpers.escape_bash(source)}\nEOS\n", error_msg: "Couldn't write script on the remote file (#{remote_file})"
+      exec! "cat << EOS > #{remote_file} && chmod +x #{remote_file} \n#{escape_bash(source)}\nEOS\n", error_msg: "Couldn't write script on the remote file (#{remote_file})"
 
       stdout, stderr, exit_status = "", "", nil
 
