@@ -1,16 +1,29 @@
 module Chaos
 
+  # Manage app creation and management on server.
   class App
     include Chaos::Helpers
     attr_reader :name, :server, :home, :vhost, :database, :git, :http
 
+    # The directory on the server where app are stored
     APP_DIR            = "/srv/app"
+    
+    # The directory where apps routes are stored (as nginx conf files)
     VHOST_DIR          = "/srv/git/routes"
+    
+    # Gitolite admin repository
     GITOLITE_ADMIN_DIR = "/srv/git/gitolite-admin"
+    
+    # User with Gitolite repo pull access
     GITOLITE_USER      = "git"
+    
+    # User with nginx reload right
     ROUTER_USER        = "git"
+
+    # User with root psql access
     POSTGRESQL_USER    = "postgres"
 
+    # Define an app on a server to which future actions will be performed.
     def initialize(name, server)
       @name   = name
       @server = server
@@ -18,10 +31,16 @@ module Chaos
       @vhost  = "#{VHOST_DIR}/#{name}"
     end
 
+    # Return the application name.
+    #
+    # @return [String] the app name
     def to_s
       @name
     end
 
+    # Create the application environment on the attached server.
+    # That will create a special user and home directory, declare an HTTP route, 
+    # create a database and it access and finnally a git repo to deploy using git.
     def create
       @server.connect do
 
@@ -94,12 +113,11 @@ module Chaos
             'done'
           end
         end
-
       end
     end
 
-    # Update the app route
-    # ex: new domains
+    # Update the HTTP route with the current port.
+    # Look at the current build version deployed for port to redirect.
     def update_route
       display_ "Update app route" do
         backends = []
@@ -113,6 +131,10 @@ module Chaos
       end
     end
 
+    # Add a domain to the app.
+    # This will write a config file for the specified domain, rewrite app route configuration and reload nginx.
+    #
+    # @param domain [String] the domain to add
     def add_domain(domain)
       @server.connect do 
         display_ "Adding '#{domain}'" do
@@ -123,6 +145,7 @@ module Chaos
       end
     end
 
+    # Display the list of domains configured for the app.
     def domains
       @server.connect do
         main_domain = @server.exec! "cat #{APP_DIR}/#{@name}/.domain", error_msg: "Cannot access the primary app domain"
@@ -134,6 +157,10 @@ module Chaos
       end
     end
 
+    # Remove a domain fom the app configuration.
+    # This will erase the domain configuration file, rewite the app route configuration and reload nginx.
+    #
+    # @param domain [String] the domain to remove
     def remove_domain(domain)
       @server.connect do 
         exit_status, stdout = @server.exec "ls #{APP_DIR}/#{@name}/domains/#{domain}"

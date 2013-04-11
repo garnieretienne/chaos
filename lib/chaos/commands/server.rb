@@ -8,6 +8,10 @@ module Chaos
       desc "bootstrap", "Bootstrap a server"
       method_option :ssh, aliases: "-s", desc: 'ssh url used to connect to the server', required: true
 
+      # Bootstrap a new server.
+      # This will configure the remote server to be able to run chef-solo, 
+      # run it to configure services with the chaos chef recipes
+      # and register the current user as admin user on the server (sudo and git rights).
       def bootstrap
         server = Chaos::Server.new options[:ssh]
 
@@ -26,6 +30,8 @@ module Chaos
         display_ "Connect to the server to change it ('ssh #{user}@#{server}') before doing anything else."
       end
 
+      # Update the server configuration.
+      # This will update the server services configuration by running chef-solo with the updated chaos recipes.
       desc "update", "Update a server configuration running chef"
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
       def update

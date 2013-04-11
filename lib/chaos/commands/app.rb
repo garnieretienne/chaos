@@ -9,6 +9,7 @@ module Chaos
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
       method_option :name, aliases: "-n", desc: 'name of the app'
 
+      # Create an application environment to the remote server.
       def create
         server = Chaos::Server.new "ssh://#{options[:server]}"
         server.ask_user_password unless server.password?

@@ -6,14 +6,24 @@ require 'chaos/helpers'
 
 module Chaos
 
+  # Everything needed to manage servers.
   class Server
     include Chaos::Helpers
     attr_reader :host, :port, :user
 
-    TMP_DIR = "/tmp"
-    GITOLITE_ADMIN_DIR = "/srv/git/gitolite-admin"
-    CHAOS_CHEF_REPO = "git://github.com/garnieretienne/chaos-chef-repo.git"
+    # Temporary directory on the system
+    TMP_DIR            = "/tmp"
 
+    # Gitolite admin repository
+    GITOLITE_ADMIN_DIR = "/srv/git/gitolite-admin"
+    
+    # Git repo of chef recipes to use with 'chef-solo'
+    CHAOS_CHEF_REPO    = "git://github.com/garnieretienne/chaos-chef-repo.git"
+
+    # Define a new server to take action on.
+    #
+    # @param ssh_uri [String] complete ssh URI to access the server, 
+    #   ex: ssh://username:password@domain.tld
     def initialize(ssh_uri)
       uri = URI(ssh_uri)
       @host = uri.host
@@ -22,14 +32,21 @@ module Chaos
       @password = uri.password
     end
 
+    # Return the server host
+    #
+    # @return [String] the server host
     def to_s
       @host
     end
 
+    # Tell if the user password on the server is memorized.
+    #
+    # @return [Boolean] is the user password already given
     def password?
       (@password)
     end
 
+    # Ask the user for its password on the server.
     def ask_user_password
       begin
         system "stty -echo"
@@ -42,6 +59,14 @@ module Chaos
       end
     end
 
+    # Connect to the server using ssh.
+    # If no password is memorized, try to connect using the user ssh key (in ~/.ssh/id_rsa).
+    # During the connection, any actions using an ssh session can be executed.
+    # 
+    # @example
+    #   server.connect do
+    #     server.exec "apt-get update"
+    #   end
     def connect
       options = { port: @port }
       if @password then
@@ -56,6 +81,11 @@ module Chaos
       end
     end
 
+    # Send a local file to the server using scp.
+    #
+    # @param src [String] local path to the file to send
+    # @param dst [String] path where the file will be copied on the server
+    # @return [Boolean] is the transfert completed
     def send_file(src, dst)
       uploaded = false
       Net::SCP.start(@host, @user, password: @password) do |scp|
@@ -66,6 +96,11 @@ module Chaos
       return uploaded
     end
 
+    # Bootstrap a new server to be ready to lauch `chef-solo`.
+    # It will configure the hostname and fully qualified domain name based on the `@host` given 
+    #   (name.domain.tld => hostname: name, fqdn: name.domain.tld).
+    # It will upload the current user pub key for ssh authentification.
+    # It will install dependencies to install Chef on the server and also install it using omnibus installer.
     def bootstrap
       fqdn = @host
       hostname = fqdn.split(/^(\w*)\.*./)[1]
@@ -110,8 +145,10 @@ module Chaos
       end
     end
 
-    # display_ chef output (topic and error only)
-    # root must be true if no sudo is needed
+    # Run `chef-solo` with the recipe configured into the chaos chef repository (CHAOS_CHEF_REPO).
+    # The displayed output is splitted to better summarize the execution.
+    #
+    # @param root [Boolean] is the user running chef root nor need sudo command
     def run_chef(root=false)
       connect do
         stdout, stderr = "", ""
@@ -135,6 +172,11 @@ module Chaos
       end
     end
 
+    # Register the previously uploaded user pub key (stored in /root/admin_key/username.pub) 
+    # as allowed to push to apps git directories.
+    #
+    # @param user [String] the username to register, 
+    #   'kurt' for '/root/admin_key/kurt.pub'
     def register_git_user(user)
       display_ "Import user key into gitolite" do
         connect do
@@ -143,6 +185,28 @@ module Chaos
       end
     end
 
+    # Exec a command on the server (need to be connected).
+    # It can also be used using block to work with live data.
+    # See: Net::SSH `exec` command (http://net-ssh.github.io/net-ssh/classes/Net/SSH/Connection/Session.html#method-i-exec).
+    #
+    # @example Get the user name
+    #   exit_status, stdout = server.exec "whoami"
+    #   puts "username: #{stdout.chomp}"
+    #
+    # @example Print remote error (using block)
+    #   server.exec "chef-solo" do |channel, stream, data|
+    #     puts data if stream == :stderr
+    #     channel.on_request("exit-status") do |ch, data|
+    #       exit_status = data.read_long
+    #       "Error !" if exit_status != 0
+    #     end
+    #   end
+    #   
+    # @param cmd [String] the command to execute
+    # @param options [Hash] the options for the command executions
+    # @option options [Boolean] :sudo run the command with sudo
+    # @option options [String] :as run the command as the given user (use sudo)
+    # @return [Array<String>] the exit status code, stdout, stderr and the executed command (useful for debugging)
     def exec(cmd, options={}, &block)
       raise Chaos::Error, "No active connection to the server" if !@ssh
       
@@ -178,6 +242,15 @@ module Chaos
       return exit_status, stdout, stderr, cmd
     end
 
+    # Exec a command on the server (need to be connected) AND raise an error if the command failed.
+    # If an error is raised, it will print the backtrace, the stdout and stderr, the command and its exit status code.
+    #
+    # @param cmd [String] the command to execute
+    # @param options [Hash] the options for the command executions
+    # @option options [Boolean] :sudo run the command with sudo
+    # @option options [String] :as run the command as the given user (use sudo)
+    # @option options [String] :error_message ('The following command exited with an error') the error message to print when an error is raised
+    # @return [String] the standart ouput returned by the command
     def exec!(cmd, options={})
       exit_status, stdout, stderr, cmd = exec(cmd, options)
       error_msg = options[:error_msg] || "The following command exited with an error"
@@ -185,8 +258,16 @@ module Chaos
       return stdout
     end
 
-    # Script: upload a script and run it
-    # options: sudo: true, args: '-s'
+    # Execute a script on the remote host. 
+    # It write the source on a temporary file and execute it.
+    # As `exec`, it can also be used using block to work with live data.
+    # See {#exec}
+    #
+    # @param source [String] the script text to execute
+    # @param options [Hash] the options for the script execution
+    # @option options [Boolean] :sudo execute the script with sudo
+    # @option options [String] :as execute the script as the given user (use sudo)
+    # @return [Array<String>] the exit status code, stdout, stderr and the executed command (useful for debugging)
     def script(source, options={}, &block)
 
       remote_file = "#{TMP_DIR}/#{Time.new.to_i}"
@@ -196,7 +277,7 @@ module Chaos
 
       if block
         exec remote_file, sudo: options[:sudo], as: options[:as] do |ch, stream, data|
-          block.call(ch, stream, data, remote_file)
+          block.call(ch, stream, data)
         end
       else
         exit_status, stdout, stderr = exec remote_file, sudo: options[:sudo], as: options[:as]
@@ -205,6 +286,15 @@ module Chaos
       return exit_status, stdout, stderr, remote_file
     end
 
+    # Execute a script on the remote host AND raise an error if the script execution failed.
+    # If an error is raised, it will print the backtrace, the stdout and stderr, the script path and its exit status code.
+    #
+    # @param source [String] the script text to execute
+    # @param options [Hash] the options for the script execution
+    # @option options [Boolean] :sudo execute the script with sudo
+    # @option options [String] :as execute the script as the given user (use sudo)
+    # @option options [String] :error_message ('The following script exited with an error') the error message to print when an error is raised
+    # @return [String] the standart ouput returned by the script
     def script!(source, options={})
       exit_status, stdout, stderr, script_path = script(source, options)
       error_msg = options[:error_msg] || "The following script exited with an error"
@@ -212,11 +302,21 @@ module Chaos
       return stdout
     end
 
-    # Execute a psql command with root access
+    # Execute a `psql` command with root permission.
+    #
+    # @param cmd [String] the psql command to execute
+    # @return [Array] the exit status code, stdout, stderr and the executed command (useful for debugging)
     def psql(cmd)
       exec "psql --command \"#{cmd}\"", as: 'postgres'
     end
 
+    # Execute a `psql` command with root permission AND raise an error if the command failed.
+    # If an error is raised, it will print the backtrace, the stdout and stderr, the command and its exit status code.
+    #
+    # @param cmd [String] the psql command to execute
+    # @param options [Hash] the options for the command executions
+    # @option options [String] :error_message ('The following command exited with an error') the error message to print when an error is raised
+    # @return [String] the standart ouput returned by the command
     def psql!(cmd, options)
       options[:as] = 'postgres'
       exec! "psql --command \"#{cmd}\"", options

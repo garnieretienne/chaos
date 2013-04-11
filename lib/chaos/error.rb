@@ -1,6 +1,7 @@
 module Chaos
   class Error < RuntimeError ; end
   
+  # Custom error with remote execution backtrace (stderr, stdout and exit status).
   class RemoteError < Exception
      attr_reader :stdout, :stderr, :exit_status, :command
 

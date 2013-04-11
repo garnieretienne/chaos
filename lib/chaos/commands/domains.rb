@@ -9,6 +9,9 @@ module Chaos
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
       method_option :name, aliases: "-n", desc: 'name of the app'
 
+      # Add a domain to the app.
+      #
+      # @param domain [String] the domain to add
       def add(domain)
         server = Chaos::Server.new "ssh://#{options[:server]}"
         server.ask_user_password unless server.password?
@@ -24,6 +27,7 @@ module Chaos
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
       method_option :name, aliases: "-n", desc: 'name of the app'
 
+      # List configured domain for the app.
       def list
         server = Chaos::Server.new "ssh://#{options[:server]}"
         name = options[:name] || File.basename(Dir.pwd)
@@ -37,6 +41,9 @@ module Chaos
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
       method_option :name, aliases: "-n", desc: 'name of the app'
 
+      # Remove a domain from the app configuration.
+      #
+      # @param domain [String] the domain to remove
       def remove(domain)
         server = Chaos::Server.new "ssh://#{options[:server]}"
         server.ask_user_password unless server.password?
