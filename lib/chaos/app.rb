@@ -59,7 +59,7 @@ module Chaos
           if exit_status == 0
             'already created'
           else
-            @server.script! script("create_user_and_home.sh", binding), sudo: true, error_msg: "Cannot create the user and home directory"
+            @server.script! template("create_user_and_home.sh", binding), sudo: true, error_msg: "Cannot create the user and home directory"
             @server.exec! "mkdir -p ~/cache ~/config ~/packages ~/domains", as: @name, error_msg: "Cannot create directory in the application folder"
             @server.exec! "chown #{@name}:deploy ~/cache && chmod 775 ~/cache", as: @name, error_msg: "Cannot change owner or permissions on '~/cache' folder"
             @server.exec! "chown #{@name}:deploy ~/packages && chmod 775 ~/packages", as: @name, error_msg: "Cannot change owner or permissions on '~/packages' folder"
@@ -73,7 +73,7 @@ module Chaos
           if exit_status == 0
             'already patched'
           else
-            @server.script! script("patch_profile.sh", binding), sudo: true, error_msg: "Cannot patch the app profile file"
+            @server.script! template("patch_profile.sh", binding), sudo: true, error_msg: "Cannot patch the app profile file"
             'done'
           end
         end
@@ -89,7 +89,7 @@ module Chaos
           if exit_status == 0
             'already declared'
           else
-            @server.script! script("create_route.sh", binding), as: ROUTER_USER, error_msg: "Cannot write the route config file"
+            @server.script! template("create_route.sh", binding), as: ROUTER_USER, error_msg: "Cannot write the route config file"
             'done'
           end
           @http = "http://#{@domain_name}"
@@ -119,9 +119,40 @@ module Chaos
           if exit_status == 0
             'already exist'
           else
-            @server.script! script("create_repo.sh", binding), as: GITOLITE_USER, error_msg: "Cannot create a repository for this app ('#{@name}')"
+            @server.script! template("create_repo.sh", binding), as: GITOLITE_USER, error_msg: "Cannot create a repository for this app ('#{@name}')"
             'done'
           end
+        end
+      end
+    end
+
+    # Stop and destroy the application environment on the attached server.
+    # That will stop the application if running, delete the HTTP route, delete the user andits home directory, 
+    # delete the application database and its user access and finally remove the git repository.
+    def destroy
+      stop
+      @server.connect do
+
+        display_ "Delete HTTP route" do
+          @server.exec! "hermes destroy #{@name} --vhost-dir #{VHOST_DIR}", as: ROUTER_USER, error_msg: "Cannot delete HTTP route for '#{@name}' app"
+          'done'
+        end
+
+        display_ "Delete user and home directory" do
+          @server.exec! "userdel -f #{@name}", sudo: true, error_msg: "Cannot delete user for '#{@name}' app"
+          @server.exec! "rm -rf #{@home}", sudo: true, error_msg: "Cannot delete home directory for '#{@name}' app"
+          'done'
+        end
+
+        display_ "Delete database and database access" do
+          @server.psql! "DROP DATABASE #{@name};", error_msg: "Cannot delete database for '#{@name}' app"
+          @server.psql! "DROP USER #{@name};", error_msg: "Cannot delete database user for '#{@name}' app"
+          'done'
+        end
+
+        display_ "Delete git repository" do
+          @server.script! template("rm_repo.sh", binding), as: GITOLITE_USER, error_msg: "Cannot delete the git repository for '#{@name}' app"
+          'done'
         end
       end
     end

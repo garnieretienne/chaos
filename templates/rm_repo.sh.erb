@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+GITOLITE_CONF_FILE=<%= GITOLITE_ADMIN_DIR %>/conf/gitolite.conf
+TMP_FILE=<%= TMP_DIR %>/git_<%= @name %>
+REPOSITORIES_DIR=<%= GITOLITE_ADMIN_DIR %>/../repositories
+
+# Remove entry from gitolite conf and push change
+sed -e '/^repo\s<%= @name %>/,+2d' $GITOLITE_CONF_FILE > $TMP_FILE && mv $TMP_FILE $GITOLITE_CONF_FILE
+cd <%= GITOLITE_ADMIN_DIR %>
+git add conf/gitolite.conf
+git commit -m "delete repository for app <%= @name %>"
+git push origin master
+
+# Delete the repository from disk
+rm -rf $REPOSITORIES_DIR/<%= @name %>.git

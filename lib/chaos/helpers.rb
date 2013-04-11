@@ -18,7 +18,7 @@ module Chaos
     # @param name [String] the name of the script (name.sh -> name.sh.erb)
     # @param binding [Binding] the execution context
     # @return [String] the interpreted script template (the script source)
-    def script(name, binding)
+    def template(name, binding)
       source = "#{File.dirname(__FILE__)}/../../templates/#{name}.erb"
       template = ERB.new IO.read(source), nil, '-'
       return template.result(binding)

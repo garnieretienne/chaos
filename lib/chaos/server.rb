@@ -111,7 +111,7 @@ module Chaos
         
         # Update hostname on server
         display_ "Setup server hostname (#{hostname})" do
-          script! script("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
+          script! template("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
           'done'
         end
 
@@ -152,7 +152,7 @@ module Chaos
     def run_chef(root=false)
       connect do
         stdout, stderr = "", ""
-        script script("chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
+        script template("chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
 
           data.each_line do |line|
             display_ line if line =~ /^(\s\s\*.*|\w.*)/
@@ -180,7 +180,7 @@ module Chaos
     def register_git_user(user)
       display_ "Import user key into gitolite" do
         connect do
-          script! script("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
+          script! template("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
         end
       end
     end

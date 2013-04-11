@@ -33,6 +33,31 @@ module Chaos
         display_ "* Url     : #{app.http}"
       end
 
+      desc "destroy", "Destroy an application on the server"
+      method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
+      method_option :name, aliases: "-n", desc: 'name of the app'
+
+      # Destroy an application on the server.
+      def destroy
+        server = Chaos::Server.new "ssh://#{options[:server]}"
+        server.ask_user_password unless server.password?
+
+        name = options[:name] || File.basename(Dir.pwd)
+        app = Chaos::App.new name, server
+
+        display_ "Destroy app '#{app}' on '#{app.server}'...", :topic
+        app.destroy
+
+        display_ "Done.", :topic
+        if File.basename(Dir.pwd) == app.name
+          if Dir.exist?('.git')
+            if system "git remote rm #{app.server} > /dev/null 2>&1"
+              display_ "Git remote '#{app.server}' removed"
+            end
+          end
+        end
+      end
+
       desc "stop", "Ask application processes to stop"
       method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
       method_option :name, aliases: "-n", desc: 'name of the app'
