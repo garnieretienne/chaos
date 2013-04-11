@@ -32,6 +32,54 @@ module Chaos
         display_ "* Git     : #{app.git}"
         display_ "* Url     : #{app.http}"
       end
+
+      desc "stop", "Ask application processes to stop"
+      method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
+      method_option :name, aliases: "-n", desc: 'name of the app'
+
+      # Ask application processes to stop.
+      def stop
+        server = Chaos::Server.new "ssh://#{options[:server]}"
+        server.ask_user_password unless server.password?
+
+        name = options[:name] || File.basename(Dir.pwd)
+        app = Chaos::App.new name, server
+
+        display_ "Stop #{app}", :topic
+        app.stop
+      end
+
+      desc "start", "Ask application processes to start"
+      method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
+      method_option :name, aliases: "-n", desc: 'name of the app'
+
+      # Ask application processes to start.
+      def start
+        server = Chaos::Server.new "ssh://#{options[:server]}"
+        server.ask_user_password unless server.password?
+
+        name = options[:name] || File.basename(Dir.pwd)
+        app = Chaos::App.new name, server
+
+        display_ "Start #{app}", :topic
+        app.start
+      end
+
+      desc "restart", "Ask application processes to restart"
+      method_option :server, aliases: "-s", desc: 'server on which the app will be published (host[:port])', required: true
+      method_option :name, aliases: "-n", desc: 'name of the app'
+
+      # Ask application processes to restart.
+      def restart
+        server = Chaos::Server.new "ssh://#{options[:server]}"
+        server.ask_user_password unless server.password?
+
+        name = options[:name] || File.basename(Dir.pwd)
+        app = Chaos::App.new name, server
+
+        display_ "Restart #{app}", :topic
+        app.restart
+      end
     end
   end
 end

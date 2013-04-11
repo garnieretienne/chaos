@@ -13,5 +13,8 @@ module Chaos
 
     desc 'domains', 'Manage domains attached to applications'
     subcommand 'domains', Chaos::Commands::Domains
+
+    desc 'domains', 'Manage app config vars'
+    subcommand 'config', Chaos::Commands::Config
   end
 end

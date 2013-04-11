@@ -20,8 +20,18 @@ module Chaos
     # User with nginx reload right
     ROUTER_USER        = "git"
 
+    # User with deployment rights
+    DEPLOY_USER        = "git"
+
     # User with root psql access
     POSTGRESQL_USER    = "postgres"
+
+    # Temporary directory on the system
+    TMP_DIR            = "/tmp"
+
+    # Script to start apps
+    STARTER_PATH       = "/srv/git/bin/starter"
+
 
     # Define an app on a server to which future actions will be performed.
     def initialize(name, server)
@@ -116,8 +126,55 @@ module Chaos
       end
     end
 
+    # Stop the application processes.
+    def stop
+      @server.connect do
+        display_ "Ask the application processes to stop" do
+          pid_file = "#{@home}/packages/current/tmp/pids/starter.pid"
+          exit_code, stdout = @server.exec "ls #{pid_file}"
+          if exit_code == 0
+            @server.exec! "kill $(cat #{pid_file})", as: @name, error_msg: "Cannot kill master pid"
+            'done'
+          else
+            'no current build running'
+          end
+        end
+      end
+    end
+
+    # Start the application processes.
+    def start
+      @server.connect do
+        display_ "Ask the application processes to start" do
+          pid_file = "#{@home}/packages/current/tmp/pids/starter.pid"
+          current_package_dir = "#{@home}/packages/current"
+          exit_code, stdout = @server.exec "ls #{current_package_dir}"
+          if exit_code == 0
+            exit_code, stdout = @server.exec "cat #{pid_file}"
+            if exit_code != 0
+              @server.exec! "cd #{current_package_dir}; HOME=#{current_package_dir} #{STARTER_PATH}", as: @name, error_msg: "Cannot start application"
+              'done'
+            else
+              "current build already running (master pid: #{stdout.chomp})"
+            end
+          else
+            'no current build, deploy first'
+          end
+        end
+        update_route
+      end
+    end
+
+    # Restart the application processes.
+    def restart
+      stop
+      sleep 1
+      start
+    end
+
     # Update the HTTP route with the current port.
     # Look at the current build version deployed for port to redirect.
+    # @note need to be connected first
     def update_route
       display_ "Update app route" do
         backends = []
@@ -138,7 +195,7 @@ module Chaos
     def add_domain(domain)
       @server.connect do 
         display_ "Adding '#{domain}'" do
-          @server.exec! "touch #{APP_DIR}/#{@name}/domains/#{domain}", sudo: true, error_msg: "Cannot attach the domain name"
+          @server.exec! "touch #{@home}/domains/#{domain}", sudo: true, error_msg: "Cannot attach the domain name"
           'done'
         end
         update_route
@@ -150,14 +207,14 @@ module Chaos
       @server.connect do
         main_domain = @server.exec! "cat #{APP_DIR}/#{@name}/.domain", error_msg: "Cannot access the primary app domain"
         display_ "- #{main_domain}"
-        stdout = @server.exec! "ls #{APP_DIR}/#{@name}/domains", error_msg: "Cannot list the domains"
+        stdout = @server.exec! "ls #{@home}/domains", error_msg: "Cannot list the domains"
         stdout.each_line do |domain|
           display_ "- #{domain}"
         end
       end
     end
 
-    # Remove a domain fom the app configuration.
+    # Remove a domain from the app configuration.
     # This will erase the domain configuration file, rewite the app route configuration and reload nginx.
     #
     # @param domain [String] the domain to remove
@@ -169,11 +226,77 @@ module Chaos
           if !domain_exist
             'not configured'
           else
-            @server.exec! "rm -f #{APP_DIR}/#{@name}/domains/#{domain}", sudo: true, error_msg: "Cannot remove the domain"
+            @server.exec! "rm -f #{@home}/domains/#{domain}", sudo: true, error_msg: "Cannot remove the domain"
             'done'
           end
         end
         update_route if domain_exist
+      end
+    end
+
+    # Display config from app environment.
+    # Read config from app configuration (do not include buildpack environments).
+    def config
+      @server.connect do
+        app_env = @server.exec! "cat #{@home}/config/*", error_msg: "Cannot read app environment"
+        app_env.each_line do |config|
+          display_ "#{config}"
+        end
+      end
+    end
+
+    # Set a config var (bash format).
+    # Write the config var into the app env config file.
+    # Overwrite if the var name is already configured.
+    #
+    # @param var [String] config var to set (ex: FOO=bar)
+    def set_config(var)
+      raise Chaos::Error, "Config var must be in bash format (NAME=value)" if !var.match /^\w*=\w*$/
+      @server.connect do
+        var_name = var.split('=')[0]
+        display_ "Setting #{var}" do
+          rebuild_env_config unset: [var_name], set: [var]
+          'done'
+        end
+      end
+      restart
+    end
+
+    # Set a config var (bash format).
+    # Write the config var into the app env config file.
+    # Overwrite if the var name is already configured.
+    #
+    # @param name [String] the name of config var to unset
+    def unset_config(name)
+      @server.connect do
+        display_ "Unsetting #{name}" do
+          rebuild_env_config unset: [name.upcase]
+          'done'
+        end
+      end
+      restart
+    end
+
+    private
+    
+    # Rebuild the env config file.
+    # Set and unset vars from the env file.
+    #
+    # @example
+    #   rebuild_env_config unset: [ 'PATH', 'APP_ENV' ], set: [ 'PATH=/new/path', 'APP_ENV=production' ]
+    #
+    # @param config [Hash] the vars to set and unset
+    # @option config [Array<String>] :unset var names to delete from the env file
+    # @option config [Array<String>] :set var names to add to the env file
+    def rebuild_env_config(config={})
+      env_file = "#{@home}/config/env"
+      config[:unset] ||= []
+      config[:set] ||= []
+      config[:unset].each do |setting|
+        @server.exec! "sed -n '/^#{setting}=.*$/!p' #{env_file} > #{TMP_DIR}/env_#{@name} && mv #{TMP_DIR}/env_#{@name} #{env_file}", as: @name, error_msg: "Cannot write the environment config file"
+      end
+      config[:set].each do |var|
+        @server.exec! "echo '#{var.chomp}' >> #{env_file}", as: @name, error_msg: "Cannot write the environment config file"
       end
     end
   end
