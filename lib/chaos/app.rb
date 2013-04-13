@@ -208,14 +208,19 @@ module Chaos
     # @note need to be connected first
     def update_route
       display_ "Update app route" do
-        backends = []
-        stdout = @server.exec! "cat /srv/app/#{@name}/packages/current/tmp/ports", error_msg: "Cannot read running application ports"
-        stdout.each_line do |port|
-          backends << "127.0.0.1:#{port.chomp}"
+        status_code, stdout = @server.exec "ls /srv/app/#{@name}/packages/current"
+        if status_code == 0
+          backends = []
+          stdout = @server.exec! "cat /srv/app/#{@name}/packages/current/tmp/ports", error_msg: "Cannot read running application ports"
+          stdout.each_line do |port|
+            backends << "127.0.0.1:#{port.chomp}"
+          end
+          update_route_cmd = "hermes update #{@name} $(cat #{@home}/.domain) --upstream #{backends.join(' ')} --vhost-dir #{VHOST_DIR} --aliases $(domains=\"\"; for file in #{APP_DIR}/#{@name}/domains/*; do domains=\"${domains} $(basename ${file})\"; done; echo $domains)"
+          @server.exec! update_route_cmd, as: ROUTER_USER, error_msg: "Cannot update app route"
+          'done'
+        else
+          'no current build'
         end
-        update_route_cmd = "hermes update #{@name} $(cat #{@home}/.domain) --upstream #{backends.join(' ')} --vhost-dir #{VHOST_DIR} --aliases $(domains=\"\"; for file in #{APP_DIR}/#{@name}/domains/*; do domains=\"${domains} $(basename ${file})\"; done; echo $domains)"
-        @server.exec! update_route_cmd, as: ROUTER_USER, error_msg: "Cannot update app route"
-        'done'
       end
     end
 
