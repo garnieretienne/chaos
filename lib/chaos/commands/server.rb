@@ -5,15 +5,15 @@ module Chaos
     class Server < Thor
       include Chaos::Helpers   
 
-      desc "bootstrap", "Bootstrap a server"
-      method_option :ssh, aliases: "-s", desc: 'ssh url used to connect to the server', required: true
+      desc "bootstrap SSH_URL", "Bootstrap a server"
+      # method_option :ssh, aliases: "-s", desc: 'ssh url used to connect to the server', required: true
 
       # Bootstrap a new server.
       # This will configure the remote server to be able to run chef-solo, 
       # run it to configure services with the chaos chef recipes
       # and register the current user as admin user on the server (sudo and git rights).
-      def bootstrap
-        server = Chaos::Server.new options[:ssh]
+      def bootstrap(ssh_url)
+        server = Chaos::Server.new ssh_url
 
         display_ "Bootstrapping #{server}...", :topic
         server.bootstrap
