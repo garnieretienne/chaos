@@ -24,7 +24,7 @@ module Chaos
     CHAOS_CHEF_REPO_BRANCH = "servicepacks"
 
     # Node.json containing roles to configure by chef
-    CHAOS_CHEF_NODE_PATH   = "/srv/git/node.json"
+    CHAOS_CHEF_NODE_PATH   = "/var/lib/chaos/node.json"
 
     # Define a new server to take action on.
     #

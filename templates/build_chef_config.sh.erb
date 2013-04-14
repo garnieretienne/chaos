@@ -1,16 +1,12 @@
 #!/bin/bash
 set -e
 
-# Generate the node.json file with roles specified by the command line
-{
-  "run_list": [ "role[server]" ]
-}
-
 node=$(cat << EOF
 {
-  "run_list": [ "<%= roles.join('" "') %>" ]
+  "run_list": [ <%= roles.map{|role| "\"role[#{role}]\""}.join(', ') %> ]
 }
 EOF
 )
 
+mkdir -p /var/lib/chaos
 echo $node > <%= CHAOS_CHEF_NODE_PATH %>
