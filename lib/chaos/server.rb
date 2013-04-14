@@ -12,13 +12,16 @@ module Chaos
     attr_reader :host, :port, :user
 
     # Temporary directory on the system
-    TMP_DIR            = "/tmp"
+    TMP_DIR                = "/tmp"
 
     # Gitolite admin repository
-    GITOLITE_ADMIN_DIR = "/srv/git/gitolite-admin"
+    GITOLITE_ADMIN_DIR     = "/srv/git/gitolite-admin"
     
     # Git repo of chef recipes to use with 'chef-solo'
-    CHAOS_CHEF_REPO    = "git://github.com/garnieretienne/chaos-chef-repo.git"
+    CHAOS_CHEF_REPO        = "git://github.com/garnieretienne/chaos-chef-repo.git"
+
+    # Git branch for the chef repo
+    CHAOS_CHEF_REPO_BRANCH = "servicepacks"
 
     # Define a new server to take action on.
     #

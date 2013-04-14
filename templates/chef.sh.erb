@@ -8,7 +8,7 @@ if [ -d /var/lib/chaos/chaos-chef-repo/.git ]; then
 else
   mkdir -p /var/lib/chaos
   cd /var/lib/chaos
-  git clone <%= CHAOS_CHEF_REPO %> &> /dev/null
+  git clone -b <%= CHAOS_CHEF_REPO_BRANCH || "master" %> <%= CHAOS_CHEF_REPO %> &> /dev/null
 fi
 
 # Run chef
