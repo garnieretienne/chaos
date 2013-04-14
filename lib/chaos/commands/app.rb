@@ -22,7 +22,7 @@ module Chaos
 
         display_ "Done.", :topic
         if File.basename(Dir.pwd) == app.name
-          if Dir.exist?('.git') && !app.server.host.nil? && !app.git_url.nil?
+          if Dir.exist?('.git') && !app.server.host.nil? && !app.git.nil?
             if system "git remote add #{app.server} git@#{app.server}:#{app}.git > /dev/null 2>&1"
               display_ "Git remote added to the current directory ('git push #{@server} master' to deploy)"
             end
