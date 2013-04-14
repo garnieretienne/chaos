@@ -277,7 +277,7 @@ module Chaos
 
       if block
         exec remote_file, sudo: options[:sudo], as: options[:as] do |ch, stream, data|
-          block.call(ch, stream, data)
+          block.call(ch, stream, data, remote_file)
         end
       else
         exit_status, stdout, stderr = exec remote_file, sudo: options[:sudo], as: options[:as]
