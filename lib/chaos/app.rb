@@ -61,6 +61,7 @@ module Chaos
           else
             @server.script! template("create_user_and_home.sh", binding), sudo: true, error_msg: "Cannot create the user and home directory"
             @server.exec! "mkdir -p ~/cache ~/config ~/packages ~/domains", as: @name, error_msg: "Cannot create directory in the application folder"
+            @server.exec! "touch ~/config/env", as: @name, error_msg: "Cannot create the env file (~/config/env)"
             @server.exec! "chown #{@name}:deploy ~/cache && chmod 775 ~/cache", as: @name, error_msg: "Cannot change owner or permissions on '~/cache' folder"
             @server.exec! "chown #{@name}:deploy ~/packages && chmod 775 ~/packages", as: @name, error_msg: "Cannot change owner or permissions on '~/packages' folder"
             @server.exec! "chown #{@name}:deploy ~/domains && chmod 775 ~/domains", as: @name, error_msg: "Cannot change owner or permissions on '~/domains' folder"
