@@ -23,6 +23,9 @@ module Chaos
     # Git branch for the chef repo
     CHAOS_CHEF_REPO_BRANCH = "servicepacks"
 
+    # Node.json containing roles to configure by chef
+    CHAOS_CHEF_NODE_PATH   = "/srv/git/node.json"
+
     # Define a new server to take action on.
     #
     # @param ssh_uri [String] complete ssh URI to access the server, 
@@ -145,6 +148,15 @@ module Chaos
             'done'
           end
         end
+      end
+    end
+
+    # Generate the node.json containing roles to install by chef
+    #
+    # @param roles [Array] roles to install (app_server, service_provider)
+    def generate_chef_config(roles)
+      connect do
+        script! template("build_chef_config.sh", binding), error_msg: "Cannot write chef config"
       end
     end
 
