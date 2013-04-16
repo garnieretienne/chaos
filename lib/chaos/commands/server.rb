@@ -19,7 +19,7 @@ module Chaos
         server.bootstrap
 
         display_ "Configure services using Chef...", :topic
-        server.generate_chef_config options[:roles]
+        server.register_server_roles options[:roles]
         server.run_chef true
 
         user = ENV['USER']

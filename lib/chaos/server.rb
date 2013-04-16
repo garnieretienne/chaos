@@ -12,25 +12,31 @@ module Chaos
     attr_reader :host, :port, :user
 
     # Temporary directory on the system
-    TMP_DIR                = "/tmp"
+    TMP_DIR                 = "/tmp"
 
     # Gitolite admin repository
-    GITOLITE_ADMIN_DIR     = "/srv/git/gitolite-admin"
+    GITOLITE_ADMIN_DIR      = "/srv/git/gitolite-admin"
     
     # Git repo of chef recipes to use with 'chef-solo'
-    CHAOS_CHEF_REPO        = "git://github.com/garnieretienne/chaos-chef-repo.git"
+    CHAOS_CHEF_REPO         = "git://github.com/garnieretienne/chaos-chef-repo.git"
 
     # Git branch for the chef repo
-    CHAOS_CHEF_REPO_BRANCH = "servicepacks"
+    CHAOS_CHEF_REPO_BRANCH  = "servicepacks"
 
     # Node.json containing roles to configure by chef
-    CHAOS_CHEF_NODE_PATH   = "/var/lib/chaos/node.json"
+    CHAOS_CHEF_NODE_PATH    = "/var/lib/chaos/node.json"
 
     # Whenre Chaos store buildpacks
-    SERVICEPACKS_DIR       = "/srv/addons/servicepacks"
+    SERVICEPACKS_DIR        = "/srv/addons/servicepacks"
+
+    # Chaos Lib files
+    CHAOS_LIB               = "/var/lib/chaos/"
 
     # Where Chaos store chef roles
-    CHAOS_CHEF_ROLES_DIR   = "/var/lib/chaos/chaos-chef-repo/roles"
+    CHAOS_CHEF_ROLES_DIR    = "/var/lib/chaos/chaos-chef-repo/roles"
+
+    # Role to be installed on the server
+    CHAOS_SERVER_CHEF_ROLES = "/var/lib/chaos/roles/chaos"
 
     # Define a new server to take action on.
     #
@@ -157,12 +163,12 @@ module Chaos
       end
     end
 
-    # Generate the node.json containing roles to install by chef
-    #
-    # @param roles [Array] roles to install (app_server, service_provider)
-    def generate_chef_config(roles)
+    def register_server_roles(roles)
       connect do
-        script! template("build_chef_config.sh", binding), error_msg: "Cannot write chef config"
+        exec! "rm -f #{CHAOS_SERVER_CHEF_ROLES};"
+        roles.each do |role|
+          exec! "mkdir -p #{CHAOS_LIB}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES}", error_msg: "Cannot register this role on the server"
+        end
       end
     end
 
