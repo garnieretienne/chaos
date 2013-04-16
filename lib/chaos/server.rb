@@ -10,9 +10,25 @@ module Chaos
   class Server
     include Chaos::Helpers
     attr_reader :host, :port, :user
+    attr_writer :password
 
     # Temporary directory on the system
     TMP_DIR                 = "/tmp"
+
+    # Deployment user
+    DEPLOY_USER             = "git"
+
+    # Deployment user home
+    DEPLOY_USER_HOME        = "/srv/git"
+
+    # Servicepacks user
+    SERVICEPACKS_USER       = "addons"
+
+    # Servicepacks user home
+    SERVICEPACKS_USER_HOME  = "/srv/addons"
+
+    # Where Chaos store buildpacks
+    SERVICEPACKS_DIR        = "/srv/addons/servicepacks"
 
     # Gitolite admin repository
     GITOLITE_ADMIN_DIR      = "/srv/git/gitolite-admin"
@@ -26,9 +42,6 @@ module Chaos
     # Node.json containing roles to configure by chef
     CHAOS_CHEF_NODE_PATH    = "/var/lib/chaos/node.json"
 
-    # Whenre Chaos store buildpacks
-    SERVICEPACKS_DIR        = "/srv/addons/servicepacks"
-
     # Chaos Lib files
     CHAOS_LIB               = "/var/lib/chaos/"
 
@@ -36,7 +49,7 @@ module Chaos
     CHAOS_CHEF_ROLES_DIR    = "/var/lib/chaos/chaos-chef-repo/roles"
 
     # Role to be installed on the server
-    CHAOS_SERVER_CHEF_ROLES = "/var/lib/chaos/roles/chaos"
+    CHAOS_SERVER_CHEF_ROLES_DIR = "/var/lib/chaos/roles"
 
     # Define a new server to take action on.
     #
@@ -163,11 +176,12 @@ module Chaos
       end
     end
 
+    #TODOC
     def register_server_roles(roles)
       connect do
-        exec! "rm -f #{CHAOS_SERVER_CHEF_ROLES};"
+        exec! "rm -f #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos"
         roles.each do |role|
-          exec! "mkdir -p #{CHAOS_LIB}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES}", error_msg: "Cannot register this role on the server"
+          exec! "mkdir -p #{CHAOS_LIB}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos", error_msg: "Cannot register this role on the server"
         end
       end
     end
@@ -219,6 +233,49 @@ module Chaos
       connect do
         display_ "Setup servicepack from '#{git_url}'" do
           script! template("setup_servicepack.sh", binding), sudo: true, error_msg: "Cannot install this buildpack"
+          'done'
+        end
+      end
+
+      run_chef
+    end
+
+    def install_servicepack(name, provider_host)
+      pub_key=""
+      connect do
+        display_ "Get the deployment account public key" do
+          pub_key = exec! "cat #{DEPLOY_USER_HOME}/.ssh/id_rsa.pub", as: DEPLOY_USER, error_msg: 'Cannot read public key'
+          'done'
+        end
+      end
+      
+      provider = Chaos::Server.new "ssh://#{provider_host}"
+      if provider_host == @host
+        provider.password = @password
+      else
+        provider.ask_user_password
+      end
+
+      provider.connect do
+        display_ "Register the public key on the service provider" do
+          exit_status, stdout = provider.exec "cat #{SERVICEPACKS_USER_HOME}/.ssh/authorized_keys | grep \"#{pub_key}\"", as: SERVICEPACKS_USER
+          if exit_status == 0
+            'already registered'
+          else
+            provider.exec! "echo \"#{pub_key}\" >> #{SERVICEPACKS_USER_HOME}/.ssh/authorized_keys", as: SERVICEPACKS_USER, error_msg: "Cannot register this key"
+            'done'
+          end
+        end
+      end
+
+      connect do
+        display_ "Import addon detect files on '#{@host}'" do
+          exec! "mkdir ~/addons/#{name}; scp #{SERVICEPACKS_USER}@#{provider}:/#{SERVICEPACKS_DIR}/#{name}/bin/detect ~/addons/#{name}/detect", as: DEPLOY_USER
+          'done'
+        end
+        display_ "build the ssh gateway to service provider" do
+          script! template("build_ssh_gateway.sh", binding), as: DEPLOY_USER, error_msg: "Cannot build the ssh gateway"
+          'done'
         end
       end
     end

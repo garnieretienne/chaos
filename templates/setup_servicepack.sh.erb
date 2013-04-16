@@ -2,19 +2,28 @@
 set -e
 
 refresh_role_link(){
-  for role in "<%= SERVICEPACKS_DIR %>/<%= name %>/chef/roles/*"; do
+  for role in "<%= SERVICEPACKS_DIR %>/<%= name %>/vendor/chef/roles/*"; do
     ln -sf $role <%= CHAOS_CHEF_ROLES_DIR %>
   done
 }
 
+register_role(){
+  rm -f <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/<%= name %>
+  for role in <%= SERVICEPACKS_DIR %>/<%= name %>/vendor/chef/roles/*; do
+    echo $(basename ${role%.json*}) >> <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/<%= name %>
+  done
+}
+
 # Clone or refresh the buildpack directory and link its roles into the chaos chef repo role folder
-if ls <%= SERVICEPACKS_DIR %>/<%= name %> > /dev/null; then
+if ls <%= SERVICEPACKS_DIR %>/<%= name %> &> /dev/null; then
   cd <%= SERVICEPACKS_DIR %>/<%= name %>
   git pull origin master &> /dev/null
   refresh_role_link
+  register_role
   echo "updated"
 else
   git clone <%= git_url %> <%= SERVICEPACKS_DIR %>/<%= name %>  &> /dev/null
   refresh_role_link
+  register_role
   echo "done"
 fi
