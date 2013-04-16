@@ -26,6 +26,12 @@ module Chaos
     # Node.json containing roles to configure by chef
     CHAOS_CHEF_NODE_PATH   = "/var/lib/chaos/node.json"
 
+    # Whenre Chaos store buildpacks
+    SERVICEPACKS_DIR       = "/srv/addons/servicepacks"
+
+    # Where Chaos store chef roles
+    CHAOS_CHEF_ROLES_DIR   = "/var/lib/chaos/chaos-chef-repo/roles"
+
     # Define a new server to take action on.
     #
     # @param ssh_uri [String] complete ssh URI to access the server, 
@@ -193,9 +199,20 @@ module Chaos
     # @param user [String] the username to register, 
     #   'kurt' for '/root/admin_key/kurt.pub'
     def register_git_user(user)
-      display_ "Import user key into gitolite" do
-        connect do
+      connect do
+        display_ "Import user key into gitolite" do
           script! template("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
+        end
+      end
+    end
+
+    # Setup a service pack on the server.
+    # It will clone the service repository, link the defined roles into the chaos chef repo role folder and run chef client with the node.json.
+    # TODO: It will copy the addon binary to the local deploy user home if it exist (= this server is also an app server)
+    def setup_servicepack(name, git_url)
+      connect do
+        display_ "Setup servicepack from '#{git_url}'" do
+          script! template("setup_servicepack.sh", binding), sudo: true, error_msg: "Cannot install this buildpack"
         end
       end
     end

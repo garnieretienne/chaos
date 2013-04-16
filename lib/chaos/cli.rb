@@ -5,6 +5,9 @@ module Chaos
 
   class CLI < Thor
 
+    desc 'servicepacks', 'Manage services offering addons on servers'
+    subcommand 'servicepacks', Chaos::Commands::Servicepacks
+
     desc 'server', 'Manage server configuration'
     subcommand 'server', Chaos::Commands::Server
 

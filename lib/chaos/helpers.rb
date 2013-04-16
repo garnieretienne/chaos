@@ -60,7 +60,7 @@ module Chaos
         if block
           print msg
           status = block.call
-          print "(#{status || 'done'})\n"
+          print "(#{status.chomp || 'done'})\n"
         else
           puts msg
         end

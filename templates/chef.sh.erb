@@ -12,4 +12,4 @@ else
 fi
 
 # Run chef
-chef-solo --config /var/lib/chaos/chaos-chef-repo/solo.rb --json-attributes <%= CHAOS_CHEF_NODE_PATH %> --force-formatter --log_level error
+chef-solo --no-color --config /var/lib/chaos/chaos-chef-repo/solo.rb --json-attributes <%= CHAOS_CHEF_NODE_PATH %> /var/lib/chaos/postgres.json --force-formatter --log_level error

@@ -6,7 +6,7 @@ module Chaos
       include Chaos::Helpers   
 
       desc "bootstrap SSH_URL", "Bootstrap a server"
-      method_option :roles, roles: "-r", desc: 'roles to install (app_server, service_provider)', type: :array, default: [ "app_server", "service_provider" ]
+      method_option :roles, aliases: "-r", desc: 'roles to install (app_server, service_provider)', type: :array, default: [ "app_server", "service_provider" ]
 
       # Bootstrap a new server.
       # This will configure the remote server to be able to run chef-solo, 
