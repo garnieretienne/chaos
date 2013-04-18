@@ -132,12 +132,6 @@ module Chaos
           'done'
         end
 
-        display_ "Delete database and database access" do
-          @server.psql! "DROP DATABASE #{@name};", error_msg: "Cannot delete database for '#{@name}' app"
-          @server.psql! "DROP USER #{@name};", error_msg: "Cannot delete database user for '#{@name}' app"
-          'done'
-        end
-
         display_ "Delete git repository" do
           @server.script! template("rm_repo.sh", binding), as: GITOLITE_USER, error_msg: "Cannot delete the git repository for '#{@name}' app"
           'done'
