@@ -67,6 +67,7 @@ module Chaos
             @server.exec! "touch ~/config/env", as: @name, error_msg: "Cannot create the env file (~/config/env)"
             @server.exec! "chown #{@name}:deploy ~/cache && chmod 775 ~/cache", as: @name, error_msg: "Cannot change owner or permissions on '~/cache' folder"
             @server.exec! "chown #{@name}:deploy ~/packages && chmod 775 ~/packages", as: @name, error_msg: "Cannot change owner or permissions on '~/packages' folder"
+            @server.exec! "chown #{@name}:deploy ~/config && chmod 775 ~/config", as: @name, error_msg: "Cannot change owner or permissions on '~/config' folder"
             @server.exec! "chown #{@name}:deploy ~/domains && chmod 775 ~/domains", as: @name, error_msg: "Cannot change owner or permissions on '~/domains' folder"
             'done'
           end
