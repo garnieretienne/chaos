@@ -23,6 +23,9 @@ module Chaos
     # User with deployment rights
     DEPLOY_USER        = "git"
 
+    # Deployment user home
+    DEPLOY_USER_HOME        = "/srv/git"
+
     # User with root psql access
     POSTGRESQL_USER    = "postgres"
 
@@ -97,23 +100,6 @@ module Chaos
           'done'
         end
 
-        display_ "Create a database and special access for the app" do
-          exit_status, stdout = @server.exec "psql -t --command \"SELECT * FROM has_database_privilege('#{@name}', '#{@name}', 'connect');\" | grep \"t\"", as: POSTGRESQL_USER
-          if exit_status == 0
-            stdout = @server.exec! "cat #{@home}/config/database", error_msg: "Cannot read database config file"
-            @database = stdout.match(/DATABASE_URL=(\S*)/)[1]
-            'already exist'
-          else
-            password = (0...10).map{ ('a'..'z').to_a[rand(26)] }.join
-            @database = "postgres://#{@name}:#{password}@127.0.0.1/#{@name}"
-            @server.psql! "CREATE USER #{@name} WITH PASSWORD '#{password}';", error_msg: "Cannot create database user '#{@name}'"
-            @server.psql! "CREATE DATABASE #{@name};", error_msg: "Cannot create database '#{@name}'"
-            @server.psql! "GRANT ALL PRIVILEGES ON DATABASE #{@name} TO #{@name};", error_msg: "Cannot grant access on database '#{@name}' to user '#{@name}"
-            @server.exec! "echo DATABASE_URL=#{@database} > #{@home}/config/database", as: @name, error_msg: "Cannot write database access to config file"
-            'done'
-          end
-        end
-
         display_ "Create a git repository for the app" do
           @git = "git@#{@server.host}:#{@name}.git"
           exit_status, stdout = @server.exec "grep \"^repo #{@name}\" #{GITOLITE_ADMIN_DIR}/conf/gitolite.conf"
@@ -168,7 +154,7 @@ module Chaos
             @server.exec! "kill $(cat #{pid_file})", as: @name, error_msg: "Cannot kill master pid"
             'done'
           else
-            'no current build running'
+            'no current build running, deploy first'
           end
         end
       end
@@ -220,7 +206,7 @@ module Chaos
           @server.exec! update_route_cmd, as: ROUTER_USER, error_msg: "Cannot update app route"
           'done'
         else
-          'no current build'
+          'no current build, deploy first'
         end
       end
     end
@@ -312,6 +298,26 @@ module Chaos
         end
       end
       restart
+    end
+
+    #TODOC
+    def add_addon(plan)
+      found=false
+      @server.connect do
+        display_ "add '#{plan}'" do
+          exit_status, stdout, stderr = @server.script template("find_addon.sh", binding), as: DEPLOY_USER
+          if exit_status != 0
+            'not found'
+          else
+            found=true
+            addon = stdout.chomp
+            env_vars = @server.exec! "#{DEPLOY_USER_HOME}/addons/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide a resource for this plan"
+            @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{addon}", as: @name, error_msg: "Cannot write addon config env"
+            'done'
+          end
+        end
+      end
+      restart if found
     end
 
     private

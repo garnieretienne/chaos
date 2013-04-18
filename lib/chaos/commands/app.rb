@@ -28,7 +28,6 @@ module Chaos
             end
           end
         end
-        display_ "* Database: #{app.database}"
         display_ "* Git     : #{app.git}"
         display_ "* Url     : #{app.http}"
       end

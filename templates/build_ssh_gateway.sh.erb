@@ -4,7 +4,7 @@ set -e
 # Build a gateway executing servicepacks binaries over ssh
 gateway=$(cat << EOF
   command=\$@
-  ssh addons@<%= provider %> servicepacks/<%= name %>/bin/\${command}
+  ssh -oStrictHostKeyChecking=no -n addons@<%= provider %> servicepacks/<%= name %>/bin/\${command}
 EOF
 )
 

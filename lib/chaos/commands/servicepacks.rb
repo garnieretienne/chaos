@@ -15,6 +15,14 @@ module Chaos
 
         display_ "Setup servicepack '#{name}' on '#{server}'...", :topic
         server.setup_servicepack name, git_url
+
+        display_ "Rebuild service configuration using chef...", :topic
+        server.run_chef
+
+        if server.app_server?
+          display_ "Install servicepack '#{name}'...", :topic
+          server.install_servicepack name, options[:provider]
+        end
       end
 
       desc "install NAME", "Install a gateway to a service provider on the server"

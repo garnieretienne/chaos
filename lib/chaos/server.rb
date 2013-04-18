@@ -74,7 +74,15 @@ module Chaos
     #
     # @return [Boolean] is the user password already given
     def password?
-      (@password)
+      return (@password)
+    end
+
+    #TODOC
+    def app_server?
+      connect do
+        exit_status, stdout = exec "ls #{DEPLOY_USER_HOME}"
+        return (exit_status == 0)
+      end
     end
 
     # Ask the user for its password on the server.
@@ -181,7 +189,7 @@ module Chaos
       connect do
         exec! "rm -f #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos"
         roles.each do |role|
-          exec! "mkdir -p #{CHAOS_LIB}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos", error_msg: "Cannot register this role on the server"
+          exec! "mkdir -p #{CHAOS_SERVER_CHEF_ROLES_DIR}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos", error_msg: "Cannot register this role on the server"
         end
       end
     end
@@ -222,6 +230,7 @@ module Chaos
       connect do
         display_ "Import user key into gitolite" do
           script! template("register_git_user.sh", binding), error_msg: "Cannot register '#{user}' private key into gitolite admin repo"
+          'done'
         end
       end
     end
@@ -236,8 +245,6 @@ module Chaos
           'done'
         end
       end
-
-      run_chef
     end
 
     def install_servicepack(name, provider_host)

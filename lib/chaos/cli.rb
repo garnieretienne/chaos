@@ -19,5 +19,8 @@ module Chaos
 
     desc 'config', 'Manage app config vars'
     subcommand 'config', Chaos::Commands::Config
+
+    desc 'addons', 'Manage app addons'
+    subcommand 'addons', Chaos::Commands::Addons
   end
 end
