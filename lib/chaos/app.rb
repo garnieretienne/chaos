@@ -256,7 +256,7 @@ module Chaos
     # Read config from app configuration (do not include buildpack environments).
     def config
       @server.connect do
-        app_env = @server.exec! "cat #{@home}/config/*", as: DEPLOY_USER, error_msg: "Cannot read app environment"
+        app_env = @server.exec! "cat #{@home}/config/*", sudo: true, error_msg: "Cannot read app environment"
         app_env.each_line do |config|
           display_ "#{config}"
         end
