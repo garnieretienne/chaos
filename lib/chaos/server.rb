@@ -48,6 +48,18 @@ module Chaos
       end
     end
 
+    # List and print available addons
+    def addons
+      # Raise error if not app_server?
+      connect do
+        exit_status, stdout = exec "ls #{ADDONS_DIR}"
+        stdout.each_line do |addon|
+          desc = exec! "#{ADDONS_DIR}/#{addon.chomp}/detect --about", error_msg: "Cannor read addon description for #{addon}"
+          display_ "* #{desc}"
+        end
+      end
+    end
+
     # Ask the user for its password on the server.
     def ask_user_password
       begin
