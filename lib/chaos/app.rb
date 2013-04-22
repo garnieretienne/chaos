@@ -143,8 +143,8 @@ module Chaos
             'no current build, deploy first'
           end
         end
-        update_route
       end
+      update_route
     end
 
     # Restart the application processes.
@@ -152,28 +152,6 @@ module Chaos
       stop
       sleep 1
       start
-    end
-
-    # Update the HTTP route with the current port.
-    # Look at the current build version deployed for port to redirect.
-    #
-    # @note need to be connected first
-    def update_route
-      display_ "Update app route" do
-        status_code, stdout = @server.exec "ls #{@home}/packages/current"
-        if status_code == 0
-          backends = []
-          stdout = @server.exec! "cat #{@home}/packages/current/tmp/ports", error_msg: "Cannot read running application ports"
-          stdout.each_line do |port|
-            backends << "127.0.0.1:#{port.chomp}"
-          end
-          update_route_cmd = "hermes update #{@name} $(cat #{@home}/.domain) --upstream #{backends.join(' ')} --vhost-dir #{VHOST_DIR} --aliases $(domains=\"\"; for file in #{@home}/domains/*; do domains=\"${domains} $(basename ${file})\"; done; echo $domains)"
-          @server.exec! update_route_cmd, as: ROUTER_USER, error_msg: "Cannot update app route"
-          'done'
-        else
-          'no current build, deploy first'
-        end
-      end
     end
 
     # Add a domain to the app.
@@ -186,8 +164,8 @@ module Chaos
           @server.exec! "touch #{@home}/domains/#{domain}", sudo: true, error_msg: "Cannot attach the domain name"
           'done'
         end
-        update_route
       end
+      update_route
     end
 
     # Display the list of domains configured for the app.
@@ -207,6 +185,7 @@ module Chaos
     #
     # @param domain [String] the domain to remove
     def remove_domain(domain)
+      domain_exist = false
       @server.connect do 
         exit_status, stdout = @server.exec "ls #{@home}/domains/#{domain}"
         domain_exist = (exit_status == 0)
@@ -218,8 +197,8 @@ module Chaos
             'done'
           end
         end
-        update_route if domain_exist
       end
+      update_route if domain_exist
     end
 
     # Display config from app environment.
@@ -305,6 +284,30 @@ module Chaos
       end
       config[:set].each do |var|
         @server.exec! "echo '#{var.chomp}' >> #{env_file}", as: @name, error_msg: "Cannot write the environment config file"
+      end
+    end
+
+    # Update the HTTP route with the current port.
+    # Look at the current build version deployed for port to redirect.
+    #
+    # @note need to be connected first
+    def update_route
+      @server.connect do
+        display_ "Update app route" do
+          status_code, stdout = @server.exec "ls #{@home}/packages/current"
+          if status_code == 0
+            backends = []
+            stdout = @server.exec! "cat #{@home}/packages/current/tmp/ports", error_msg: "Cannot read running application ports"
+            stdout.each_line do |port|
+              backends << "127.0.0.1:#{port.chomp}"
+            end
+            update_route_cmd = "hermes update #{@name} $(cat #{@home}/.domain) --upstream #{backends.join(' ')} --vhost-dir #{VHOST_DIR} --aliases $(domains=\"\"; for file in #{@home}/domains/*; do domains=\"${domains} $(basename ${file})\"; done; echo $domains)"
+            @server.exec! update_route_cmd, as: ROUTER_USER, error_msg: "Cannot update app route"
+            'done'
+          else
+            'no current build, deploy first'
+          end
+        end
       end
     end
   end
