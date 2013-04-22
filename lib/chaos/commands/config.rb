@@ -12,6 +12,7 @@ module Chaos
       # List all the env config vars for an app
       def list
         server = Chaos::Server.new "ssh://#{options[:server]}"
+        server.ask_user_password unless server.password?
 
         name = options[:name] || File.basename(Dir.pwd)
         app = Chaos::App.new name, server

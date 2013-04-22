@@ -256,7 +256,7 @@ module Chaos
     # Read config from app configuration (do not include buildpack environments).
     def config
       @server.connect do
-        app_env = @server.exec! "cat #{@home}/config/*", error_msg: "Cannot read app environment"
+        app_env = @server.exec! "cat #{@home}/config/*", as: DEPLOY_USER, error_msg: "Cannot read app environment"
         app_env.each_line do |config|
           display_ "#{config}"
         end
@@ -307,7 +307,7 @@ module Chaos
             found=true
             addon = stdout.chomp
             env_vars = @server.exec! "#{DEPLOY_USER_HOME}/addons/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide a resource for this plan"
-            @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{addon}", as: @name, error_msg: "Cannot write addon config env"
+            @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{addon} && chmod 660 #{@home}/config/#{addon}", as: @name, error_msg: "Cannot write addon config env"
             'done'
           end
         end
