@@ -280,7 +280,7 @@ module Chaos
           exec! "mkdir ~/addons/#{name}; scp #{SERVICEPACKS_USER}@#{provider}:/#{SERVICEPACKS_DIR}/#{name}/bin/detect ~/addons/#{name}/detect", as: DEPLOY_USER
           'done'
         end
-        display_ "build the ssh gateway to service provider" do
+        display_ "Build the ssh gateway to service provider" do
           script! template("build_ssh_gateway.sh", binding), as: DEPLOY_USER, error_msg: "Cannot build the ssh gateway"
           'done'
         end

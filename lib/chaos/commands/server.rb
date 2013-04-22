@@ -28,7 +28,7 @@ module Chaos
 
         display_ "Done.", :topic
         display_ "Default passwords set for admin users by chef is their user names."
-        display_ "Connect to the server to change it ('ssh #{user}@#{server}') before doing anything else."
+        display_ "Connect to the server to change it ('ssh #{server}') before doing anything else."
       end
 
       # Update the server configuration.
