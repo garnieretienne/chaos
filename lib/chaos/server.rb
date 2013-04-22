@@ -38,7 +38,9 @@ module Chaos
       return (@password)
     end
 
-    #TODOC
+    # Tell if the current host is configured to host applications.
+    #
+    # @return [Boolean] is the current host configured to host apps
     def app_server?
       connect do
         exit_status, stdout = exec "ls #{DEPLOY_USER_HOME}"
@@ -145,16 +147,6 @@ module Chaos
       end
     end
 
-    #TODOC
-    def register_server_roles(roles)
-      connect do
-        exec! "rm -f #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos"
-        roles.each do |role|
-          exec! "mkdir -p #{CHAOS_SERVER_CHEF_ROLES_DIR}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos", error_msg: "Cannot register this role on the server"
-        end
-      end
-    end
-
     # Run `chef-solo` with the recipe configured into the chaos chef repository (CHAOS_CHEF_REPO).
     # The displayed output is splitted to better summarize the execution.
     #
@@ -196,9 +188,13 @@ module Chaos
       end
     end
 
-    # Setup a service pack on the server.
-    # It will clone the service repository, link the defined roles into the chaos chef repo role folder and run chef client with the node.json.
-    # TODO: It will copy the addon binary to the local deploy user home if it exist (= this server is also an app server)
+    # Setup a servicepack on the server.
+    # It will clone the servicepack repository, link the servicepack chef roles into the server chef dir 
+    # and run chef client with the new configuration.
+    # The server will be able to manage ressources for the service it provide.
+    #
+    # @param name [String] the name of the service provided by the servicepack (ex: postgresql, redis)
+    # @param git_url [String] the url of the public git repo hosting the buildpack
     def setup_servicepack(name, git_url)
       connect do
         display_ "Setup servicepack from '#{git_url}'" do
@@ -208,6 +204,12 @@ module Chaos
       end
     end
 
+    # Install a servicepack on the server.
+    # After a servicepack has been installed on an app server, it will be able to provide addon plans offered 
+    # by the service provider (the server on which the servicepack has been setuped).
+    #
+    # @param name [String] the name of the service provided by the servicepack (ex: postgresql, redis)
+    # @param provider_host [String] the host on which the servicepack has been setuped 
     def install_servicepack(name, provider_host)
       pub_key=""
       connect do

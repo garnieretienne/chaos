@@ -244,7 +244,9 @@ module Chaos
       restart
     end
 
-    #TODOC
+    # Add an addon plan to the app
+    #
+    # @param plan [String] the name of the addon plan to ask for (ex: heroku-postgresql:dev)
     def add_addon(plan)
       found=false
       @server.connect do
