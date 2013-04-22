@@ -12,45 +12,6 @@ module Chaos
     attr_reader :host, :port, :user
     attr_writer :password
 
-    # Temporary directory on the system
-    TMP_DIR                 = "/tmp"
-
-    # Deployment user
-    DEPLOY_USER             = "git"
-
-    # Deployment user home
-    DEPLOY_USER_HOME        = "/srv/git"
-
-    # Servicepacks user
-    SERVICEPACKS_USER       = "addons"
-
-    # Servicepacks user home
-    SERVICEPACKS_USER_HOME  = "/srv/addons"
-
-    # Where Chaos store buildpacks
-    SERVICEPACKS_DIR        = "/srv/addons/servicepacks"
-
-    # Gitolite admin repository
-    GITOLITE_ADMIN_DIR      = "/srv/git/gitolite-admin"
-    
-    # Git repo of chef recipes to use with 'chef-solo'
-    CHAOS_CHEF_REPO         = "git://github.com/garnieretienne/chaos-chef-repo.git"
-
-    # Git branch for the chef repo
-    CHAOS_CHEF_REPO_BRANCH  = "servicepacks"
-
-    # Node.json containing roles to configure by chef
-    CHAOS_CHEF_NODE_PATH    = "/var/lib/chaos/node.json"
-
-    # Chaos Lib files
-    CHAOS_LIB               = "/var/lib/chaos/"
-
-    # Where Chaos store chef roles
-    CHAOS_CHEF_ROLES_DIR    = "/var/lib/chaos/chaos-chef-repo/roles"
-
-    # Role to be installed on the server
-    CHAOS_SERVER_CHEF_ROLES_DIR = "/var/lib/chaos/roles"
-
     # Define a new server to take action on.
     #
     # @param ssh_uri [String] complete ssh URI to access the server, 
@@ -91,7 +52,7 @@ module Chaos
         system "stty -echo"
         display_ "Enter password for '#{@user}' on '#{@host}': ", :ask do
           @password = STDIN.gets.chomp
-          '******'
+          '****************'
         end
       ensure
         system "stty echo"
@@ -150,7 +111,7 @@ module Chaos
         
         # Update hostname on server
         display_ "Setup server hostname (#{hostname})" do
-          script! template("hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
+          script! template("set_hostname.sh", binding), error_msg: "Host name or fully qualified domain name cannot be correctly configured"
           'done'
         end
 
@@ -201,7 +162,7 @@ module Chaos
     def run_chef(root=false)
       connect do
         stdout, stderr = "", ""
-        script template("chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
+        script template("run_chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
 
           data.each_line do |line|
             display_ line if line =~ /^(\s\s\*.*|\w.*)/
@@ -277,7 +238,7 @@ module Chaos
 
       connect do
         display_ "Import addon detect files on '#{@host}'" do
-          exec! "mkdir ~/addons/#{name}; scp #{SERVICEPACKS_USER}@#{provider}:/#{SERVICEPACKS_DIR}/#{name}/bin/detect ~/addons/#{name}/detect", as: DEPLOY_USER
+          exec! "mkdir ~/addons/#{name}; scp #{SERVICEPACKS_USER}@#{provider}:/#{SERVICEPACKS_DIR}/#{name}/bin/detect #{ADDONS_DIR}/#{name}/detect", as: DEPLOY_USER
           'done'
         end
         display_ "Build the ssh gateway to service provider" do

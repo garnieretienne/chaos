@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+# Clone or update the chaos chef repository
+if [ -d <%= CHAOS_CHEF_REPO_DIR %>/.git ]; then
+  cd <%= CHAOS_CHEF_REPO_DIR %>
+  git pull origin <%= CHAOS_CHEF_REPO_BRANCH || "master" %> &> /dev/null
+else
+  mkdir -p <%= CHAOS_LIB %>
+  mkdir -p <%= CHAOS_SERVER_CHEF_ROLES_DIR %>
+  cd <%= CHAOS_LIB %>
+  git clone -b <%= CHAOS_CHEF_REPO_BRANCH || "master" %> <%= CHAOS_CHEF_REPO %> &> /dev/null
+fi
+
+# Generate a node.json from registered roles
+roles_list=$(for role in $(cat <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/*); do echo -n "\"role[${role}]\", "; done)
+roles_list=$(echo ${roles_list:0:${#roles_list}-2})
+
+node=$(cat << EOF
+{
+  "run_list": [ ${roles_list} ]
+}
+EOF
+)
+
+echo "$node" > <%= CHAOS_CHEF_NODE_PATH %>
+
+# Run chef
+chef-solo --no-color --config /var/lib/chaos/chaos-chef-repo/solo.rb --json-attributes <%= CHAOS_CHEF_NODE_PATH %> --force-formatter --log_level error

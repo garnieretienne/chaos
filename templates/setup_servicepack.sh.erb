@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
+# Link servicepacks roles to chef role directory.
 refresh_role_link(){
   for role in "<%= SERVICEPACKS_DIR %>/<%= name %>/vendor/chef/roles/*"; do
     ln -sf $role <%= CHAOS_CHEF_ROLES_DIR %>
   done
 }
 
+# Register roles name into server chef roles directory.
+#
+# Registered roles will be used to generate a 'node.json' file at chef runtime.
 register_role(){
   rm -f <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/<%= name %>
   for role in <%= SERVICEPACKS_DIR %>/<%= name %>/vendor/chef/roles/*; do
@@ -14,7 +18,7 @@ register_role(){
   done
 }
 
-# Clone or refresh the buildpack directory and link its roles into the chaos chef repo role folder
+# Clone or refresh the buildpack directory and link its roles into the chaos chef repo role folder.
 if ls <%= SERVICEPACKS_DIR %>/<%= name %> &> /dev/null; then
   cd <%= SERVICEPACKS_DIR %>/<%= name %>
   git pull origin master &> /dev/null

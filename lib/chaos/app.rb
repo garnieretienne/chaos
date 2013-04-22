@@ -5,37 +5,6 @@ module Chaos
     include Chaos::Helpers
     attr_reader :name, :server, :home, :vhost, :database, :git, :http
 
-    # The directory on the server where app are stored
-    APP_DIR            = "/srv/app"
-    
-    # The directory where apps routes are stored (as nginx conf files)
-    VHOST_DIR          = "/srv/git/routes"
-    
-    # Gitolite admin repository
-    GITOLITE_ADMIN_DIR = "/srv/git/gitolite-admin"
-    
-    # User with Gitolite repo pull access
-    GITOLITE_USER      = "git"
-    
-    # User with nginx reload right
-    ROUTER_USER        = "git"
-
-    # User with deployment rights
-    DEPLOY_USER        = "git"
-
-    # Deployment user home
-    DEPLOY_USER_HOME        = "/srv/git"
-
-    # User with root psql access
-    POSTGRESQL_USER    = "postgres"
-
-    # Temporary directory on the system
-    TMP_DIR            = "/tmp"
-
-    # Script to start apps
-    STARTER_PATH       = "/srv/git/bin/starter"
-
-
     # Define an app on a server to which future actions will be performed.
     def initialize(name, server)
       @name   = name
@@ -63,18 +32,18 @@ module Chaos
             'already created'
           else
             @server.script! template("create_user_and_home.sh", binding), sudo: true, error_msg: "Cannot create the user and home directory"
-            @server.exec! "mkdir -p ~/cache ~/config ~/packages ~/domains", as: @name, error_msg: "Cannot create directory in the application folder"
-            @server.exec! "touch ~/config/env", as: @name, error_msg: "Cannot create the env file (~/config/env)"
-            @server.exec! "chown #{@name}:deploy ~/cache && chmod 775 ~/cache", as: @name, error_msg: "Cannot change owner or permissions on '~/cache' folder"
-            @server.exec! "chown #{@name}:deploy ~/packages && chmod 775 ~/packages", as: @name, error_msg: "Cannot change owner or permissions on '~/packages' folder"
-            @server.exec! "chown #{@name}:deploy ~/config && chmod 775 ~/config", as: @name, error_msg: "Cannot change owner or permissions on '~/config' folder"
-            @server.exec! "chown #{@name}:deploy ~/domains && chmod 775 ~/domains", as: @name, error_msg: "Cannot change owner or permissions on '~/domains' folder"
+            @server.exec! "mkdir -p #{@home}/cache #{@home}/config #{@home}/packages #{@home}/domains", as: @name, error_msg: "Cannot create directory in the application folder"
+            @server.exec! "touch #{@home}/config/env", as: @name, error_msg: "Cannot create the env file (~/config/env)"
+            @server.exec! "chown #{@name}:deploy #{@home}/cache && chmod 775 #{@home}/cache", as: @name, error_msg: "Cannot change owner or permissions on '~/cache' folder"
+            @server.exec! "chown #{@name}:deploy #{@home}/packages && chmod 775 #{@home}/packages", as: @name, error_msg: "Cannot change owner or permissions on '~/packages' folder"
+            @server.exec! "chown #{@name}:deploy #{@home}/config && chmod 775 #{@home}/config", as: @name, error_msg: "Cannot change owner or permissions on '~/config' folder"
+            @server.exec! "chown #{@name}:deploy #{@home}/domains && chmod 775 #{@home}/domains", as: @name, error_msg: "Cannot change owner or permissions on '~/domains' folder"
             'done'
           end
         end 
 
         display_ "Patch app profile to load running environment on new shell" do
-          exit_status, stdout = @server.exec "cat #{APP_DIR}/#{@name}/.profile | grep 'If a package is running, load the app environment'"
+          exit_status, stdout = @server.exec "cat #{@home}/.profile | grep 'If a package is running, load the app environment'"
           if exit_status == 0
             'already patched'
           else
@@ -83,13 +52,13 @@ module Chaos
           end
         end
 
-        @domain_name = "#{@name}.#{@server.host}"
+        domain_name = "#{@name}.#{@server.host}"
         display_ "Generate a domain name for the app" do
-          @server.exec! "echo #{@domain_name} > ~/.domain", as: @name, error_msg: "Cannot write the domain name configuration file"
-          "#{@domain_name}"
+          @server.exec! "echo #{domain_name} > ~/.domain", as: @name, error_msg: "Cannot write the domain name configuration file"
+          "#{domain_name}"
         end
 
-        display_ "Create an HTTP route for #{@domain_name} -> #{@name}" do
+        display_ "Create an HTTP route for #{domain_name} -> #{@name}" do
           exit_status, stdout = @server.exec "ls #{VHOST_DIR}/#{@name}"
           if exit_status == 0
             'already declared'
@@ -97,12 +66,12 @@ module Chaos
             @server.script! template("create_route.sh", binding), as: ROUTER_USER, error_msg: "Cannot write the route config file"
             'done'
           end
-          @http = "http://#{@domain_name}"
+          @http = "http://#{domain_name}"
           'done'
         end
 
         display_ "Create a git repository for the app" do
-          @git = "git@#{@server.host}:#{@name}.git"
+          @git = "#{DEPLOY_USER}@#{@server.host}:#{@name}.git"
           exit_status, stdout = @server.exec "grep \"^repo #{@name}\" #{GITOLITE_ADMIN_DIR}/conf/gitolite.conf"
           if exit_status == 0
             'already exist'
@@ -187,17 +156,18 @@ module Chaos
 
     # Update the HTTP route with the current port.
     # Look at the current build version deployed for port to redirect.
+    #
     # @note need to be connected first
     def update_route
       display_ "Update app route" do
-        status_code, stdout = @server.exec "ls /srv/app/#{@name}/packages/current"
+        status_code, stdout = @server.exec "ls #{@home}/packages/current"
         if status_code == 0
           backends = []
-          stdout = @server.exec! "cat /srv/app/#{@name}/packages/current/tmp/ports", error_msg: "Cannot read running application ports"
+          stdout = @server.exec! "cat #{@home}/packages/current/tmp/ports", error_msg: "Cannot read running application ports"
           stdout.each_line do |port|
             backends << "127.0.0.1:#{port.chomp}"
           end
-          update_route_cmd = "hermes update #{@name} $(cat #{@home}/.domain) --upstream #{backends.join(' ')} --vhost-dir #{VHOST_DIR} --aliases $(domains=\"\"; for file in #{APP_DIR}/#{@name}/domains/*; do domains=\"${domains} $(basename ${file})\"; done; echo $domains)"
+          update_route_cmd = "hermes update #{@name} $(cat #{@home}/.domain) --upstream #{backends.join(' ')} --vhost-dir #{VHOST_DIR} --aliases $(domains=\"\"; for file in #{@home}/domains/*; do domains=\"${domains} $(basename ${file})\"; done; echo $domains)"
           @server.exec! update_route_cmd, as: ROUTER_USER, error_msg: "Cannot update app route"
           'done'
         else
@@ -223,7 +193,7 @@ module Chaos
     # Display the list of domains configured for the app.
     def domains
       @server.connect do
-        main_domain = @server.exec! "cat #{APP_DIR}/#{@name}/.domain", error_msg: "Cannot access the primary app domain"
+        main_domain = @server.exec! "cat #{@home}/.domain", error_msg: "Cannot access the primary app domain"
         display_ "- #{main_domain}"
         stdout = @server.exec! "ls #{@home}/domains", error_msg: "Cannot list the domains"
         stdout.each_line do |domain|
@@ -238,7 +208,7 @@ module Chaos
     # @param domain [String] the domain to remove
     def remove_domain(domain)
       @server.connect do 
-        exit_status, stdout = @server.exec "ls #{APP_DIR}/#{@name}/domains/#{domain}"
+        exit_status, stdout = @server.exec "ls #{@home}/domains/#{domain}"
         domain_exist = (exit_status == 0)
         display_ "Removing '#{domain}'" do
           if !domain_exist
@@ -306,7 +276,7 @@ module Chaos
           else
             found=true
             addon = stdout.chomp
-            env_vars = @server.exec! "#{DEPLOY_USER_HOME}/addons/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide a resource for this plan"
+            env_vars = @server.exec! "#{ADDONS_DIR}/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide a resource for this plan"
             @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{addon} && chmod 660 #{@home}/config/#{addon}", as: @name, error_msg: "Cannot write addon config env"
             'done'
           end

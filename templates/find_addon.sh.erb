@@ -2,7 +2,7 @@
 set -e
 
 # Search for an addon plan provider in the addons direcory
-for addon_path in <%= DEPLOY_USER_HOME %>/addons/*; do
+for addon_path in <%= ADDONS_DIR %>/*; do
   if [ -f ${addon_path}/detect ]; then
     detected=$(${addon_path}/detect <%= plan %>)
     if [[ $? == 0 ]]; then
