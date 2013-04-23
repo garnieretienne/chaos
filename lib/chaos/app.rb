@@ -257,9 +257,36 @@ module Chaos
           else
             found=true
             addon = stdout.chomp
-            env_vars = @server.exec! "#{ADDONS_DIR}/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide a resource for this plan"
+            env_vars = @server.exec! "#{ADDONS_DIR}/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide this plan"
             @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{plan} && chmod 660 #{@home}/config/#{plan} && chown #{@name}:#{DEPLOY_GROUP} #{@home}/config/#{plan}", sudo: true, error_msg: "Cannot write addon config env"
             'done'
+          end
+        end
+      end
+      restart if found
+    end
+
+    # Remove an addon plan from the app
+    #
+    # @param plan [String] the name of the addon plan to remove (ex: heroku-postgresql:dev)
+    def remove_addon(plan)
+      found=false
+      @server.connect do
+        display_ "remove '#{plan}'" do
+          exit_status, stdout, stderr = @server.exec "ls #{@home}/config/#{plan}", as: @name
+          if exit_status != 0
+            'not found'
+          else
+            exit_status, stdout, stderr = @server.script template("find_addon.sh", binding), as: DEPLOY_USER
+            if exit_status != 0
+              'provider not found'
+            else
+              found=true
+              addon = stdout.chomp
+              @server.exec! "#{ADDONS_DIR}/#{addon}/gateway unprovide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot unprovide this plan"
+              @server.exec! "rm #{@home}/config/#{plan}", sudo: true, error_msg: "Cannot remove addon config env"
+              'done'
+            end
           end
         end
       end
