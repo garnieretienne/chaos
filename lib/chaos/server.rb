@@ -48,9 +48,9 @@ module Chaos
       end
     end
 
-    # List and print available addons
+    # List and print available addons.
     def addons
-      # Raise error if not app_server?
+      raise Chaos::Error, "The specified server ('#{@host}') is not an app server" unless app_server?
       connect do
         exit_status, stdout = exec "ls #{ADDONS_DIR}"
         stdout.each_line do |addon|
@@ -108,6 +108,18 @@ module Chaos
         end
       end
       return uploaded
+    end
+
+    # Registered roles will be used to generate a 'node.json' file at chef runtime
+    #
+    # @param roles [Array<String>] roles to configure on the host
+    def register_server_roles(roles)
+      connect do
+        exec! "rm -f #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos"
+        roles.each do |role|
+          exec! "mkdir -p #{CHAOS_SERVER_CHEF_ROLES_DIR}; echo '#{role}' >> #{CHAOS_SERVER_CHEF_ROLES_DIR}/chaos", error_msg: "Cannot register this role on the server"
+        end
+      end
     end
 
     # Bootstrap a new server to be ready to lauch `chef-solo`.
