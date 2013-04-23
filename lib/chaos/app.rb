@@ -258,7 +258,7 @@ module Chaos
             found=true
             addon = stdout.chomp
             env_vars = @server.exec! "#{ADDONS_DIR}/#{addon}/gateway provide #{@name}", as: DEPLOY_USER, error_msg: "Provider cannot provide a resource for this plan"
-            @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{addon} && chmod 660 #{@home}/config/#{addon}", as: @name, error_msg: "Cannot write addon config env"
+            @server.exec! "echo #{env_vars.chomp} > #{@home}/config/#{plan} && chmod 660 #{@home}/config/#{plan} && chown #{@name}:#{DEPLOY_GROUP} #{@home}/config/#{plan}", sudo: true, error_msg: "Cannot write addon config env"
             'done'
           end
         end

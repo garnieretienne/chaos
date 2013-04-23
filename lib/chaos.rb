@@ -17,6 +17,9 @@ module Chaos
   # This user run the deployment script to build and package apps pushed by git.
   DEPLOY_USER                 = "git"
 
+  # Shared group beetween deploy user and app users
+  DEPLOY_GROUP                = "deploy"
+
   # Deployment user home.
   DEPLOY_USER_HOME            = "/srv/#{DEPLOY_USER}"
 
