@@ -37,6 +37,19 @@ module Chaos
         display_ "Install servicepack '#{name}' from '#{options[:provider]}' on '#{server}'...", :topic
         server.install_servicepack name, options[:provider]
       end
+
+      desc "uninstall NAME", "Uninstall addon gateway from the server"
+      method_option :provider, aliases: "-p", desc: 'server which provide the service', required: true
+      method_option :server, aliases: "-s", desc: 'server on which the gateway will be uninstalled', required: true
+
+      # Uninstall addon gateway from the server
+      def uninstall(name)
+        server = Chaos::Server.new "ssh://#{options[:server]}"
+        server.ask_user_password unless server.password?
+
+        display_ "Uninstall servicepack '#{name}' from '#{options[:provider]}' on '#{server}'...", :topic
+        server.uninstall_servicepack name, options[:provider]
+      end
     end
   end
 end

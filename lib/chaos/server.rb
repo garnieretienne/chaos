@@ -252,7 +252,7 @@ module Chaos
 
       provider.connect do
         display_ "Register the public key on the service provider" do
-          exit_status, stdout = provider.exec "cat #{SERVICEPACKS_USER_HOME}/.ssh/authorized_keys | grep \"#{pub_key}\"", as: SERVICEPACKS_USER
+          exit_status, stdout = provider.exec "cat #{SERVICEPACKS_USER_HOME}/.ssh/authorized_keys | grep \"#{pub_key.chomp}\"", as: SERVICEPACKS_USER
           if exit_status == 0
             'already registered'
           else
@@ -269,6 +269,39 @@ module Chaos
         end
         display_ "Build the ssh gateway to service provider" do
           script! template("build_ssh_gateway.sh", binding), as: DEPLOY_USER, error_msg: "Cannot build the ssh gateway"
+          'done'
+        end
+      end
+    end
+
+    # Uninstall servicepack
+    #
+    # @param name [String] the name of the service provided by the servicepack (ex: postgresql, redis)
+    # @param provider_host [String] the host on which the servicepack has been setuped 
+    def uninstall_servicepack(name, provider_host)
+      pub_key=""
+
+      connect do
+        display_ "Remove addon gateway" do
+         exec! "rm -r #{ADDONS_DIR}/#{name}", sudo: true, error_msg: "Cannot delete the addon dir ('#{ADDONS_DIR}/#{name}')"
+          'done'
+        end
+        display_ "Get the deployment account public key" do
+          pub_key = exec! "cat #{DEPLOY_USER_HOME}/.ssh/id_rsa.pub", as: DEPLOY_USER, error_msg: 'Cannot read public key'
+          'done'
+        end
+      end
+
+      provider = Chaos::Server.new "ssh://#{provider_host}"
+      if provider_host == @host
+        provider.password = @password
+      else
+        provider.ask_user_password
+      end
+
+      provider.connect do
+        display_ "Unregister the public key from the service provider" do
+          provider.exec! "sed -i '\##{pub_key.chomp}#d' #{SERVICEPACKS_USER_HOME}/.ssh/authorized_keys", as: SERVICEPACKS_USER, error_msg: "Cannot unregister this key"
           'done'
         end
       end
