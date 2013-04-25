@@ -49,8 +49,8 @@ update_chef_repo(){
   fi
 }
 
-# Generate a json config for all environments variables configured by buildpacks
-load_buildpacks_env(){
+# Generate a json config for all environments variables configured by servicepacks
+load_servicepacks_env(){
   env="{}"
   for servicepack in <%= SERVICEPACKS_DIR %>/*; do
     local env_file="$servicepack/env"
@@ -71,7 +71,7 @@ get_roles_list(){
 
 # Generate a node.json from registered roles
 generate_node_config(){
-  load_buildpacks_env
+  load_servicepacks_env
   get_roles_list
 
   local env_line=""

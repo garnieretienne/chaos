@@ -50,6 +50,29 @@ module Chaos
         display_ "Uninstall servicepack '#{name}' from '#{options[:provider]}' on '#{server}'...", :topic
         server.uninstall_servicepack name, options[:provider]
       end
+
+      desc "config NAME [VAR]", "Show or edit an the buildpack env file"
+      method_option :provider, aliases: "-p", desc: 'server which provide the service', required: true
+      method_option :delete, aliases: "-d", desc: 'delete the env variable'
+
+      def config(name, var=nil)
+        server = Chaos::Server.new "ssh://#{options[:provider]}"
+
+        if var
+          server.ask_user_password unless server.password?
+          display_ "Update servicepack config for '#{name}' on '#{server}':", :topic
+          if options[:delete]
+            server.unset_servicepack_config name, var
+          else
+            server.set_servicepack_config name, var
+          end
+          display_ "Rebuild service configuration using chef...", :topic
+          server.run_chef
+        else
+          display_ "Show servicepack config for '#{name}' on '#{server}':", :topic
+          server.list_servicepack_config name
+        end
+      end
     end
   end
 end

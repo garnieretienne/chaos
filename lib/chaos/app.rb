@@ -222,7 +222,7 @@ module Chaos
       @server.connect do
         var_name = var.split('=')[0]
         display_ "Setting #{var}" do
-          rebuild_env_config unset: [var_name], set: [var]
+          rebuild_env_file @server, "#{@home}/config/env", unset: [var_name], set: [var], as: @name
           'done'
         end
       end
@@ -237,7 +237,7 @@ module Chaos
     def unset_config(name)
       @server.connect do
         display_ "Unsetting #{name}" do
-          rebuild_env_config unset: [name.upcase]
+          rebuild_env_file @server, "#{@home}/config/env", unset: [name.upcase], as: name
           'done'
         end
       end
@@ -294,27 +294,6 @@ module Chaos
     end
 
     private
-    
-    # Rebuild the env config file.
-    # Set and unset vars from the env file.
-    #
-    # @example
-    #   rebuild_env_config unset: [ 'PATH', 'APP_ENV' ], set: [ 'PATH=/new/path', 'APP_ENV=production' ]
-    #
-    # @param config [Hash] the vars to set and unset
-    # @option config [Array<String>] :unset var names to delete from the env file
-    # @option config [Array<String>] :set var names to add to the env file
-    def rebuild_env_config(config={})
-      env_file = "#{@home}/config/env"
-      config[:unset] ||= []
-      config[:set] ||= []
-      config[:unset].each do |setting|
-        @server.exec! "sed -n '/^#{setting}=.*$/!p' #{env_file} > #{TMP_DIR}/env_#{@name} && mv #{TMP_DIR}/env_#{@name} #{env_file}", as: @name, error_msg: "Cannot write the environment config file"
-      end
-      config[:set].each do |var|
-        @server.exec! "echo '#{var.chomp}' >> #{env_file}", as: @name, error_msg: "Cannot write the environment config file"
-      end
-    end
 
     # Update the HTTP route with the current port.
     # Look at the current build version deployed for port to redirect.

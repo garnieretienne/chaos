@@ -307,6 +307,43 @@ module Chaos
       end
     end
 
+    def list_servicepack_config(name)
+      env_file = "#{SERVICEPACKS_DIR}/#{name}/env"
+      connect do
+        exit_status, stdout = exec "ls #{env_file}"
+        if exit_status != 0
+          display_ "No config set"
+        else
+          env = exec! "cat #{env_file}"
+          env.each_line do |env_var|
+            display_ env_var
+          end
+        end
+      end
+    end
+
+    def set_servicepack_config(name, var)
+      raise Chaos::Error, "Config var must be in bash format (NAME=value)" if !var.match /^\w*=\w*$/
+
+      connect do
+        var_name = var.split('=')[0]
+        display_ "Setting #{var}" do
+          rebuild_env_file self, "#{SERVICEPACKS_DIR}/#{name}/env", unset: [var_name], set: [var], sudo: true
+          'done'
+        end
+      end
+    end
+
+    def unset_servicepack_config(name, var)
+      connect do
+        var_name = var.split('=')[0]
+        display_ "Unsetting #{var_name}" do
+          rebuild_env_file self, "#{SERVICEPACKS_DIR}/#{name}/env", unset: [var_name.upcase], sudo: true
+          'done'
+        end
+      end
+    end
+
     # Exec a command on the server (need to be connected).
     # It can also be used using block to work with live data.
     # See: Net::SSH `exec` command (http://net-ssh.github.io/net-ssh/classes/Net/SSH/Connection/Session.html#method-i-exec).
