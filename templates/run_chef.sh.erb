@@ -1,29 +1,100 @@
 #!/bin/bash
 set -e
 
+# Convert an ENV variable into a json supported by chef
+# Example:
+#   HELLO_WORLD_FOO-BAR="Hello World" =>
+#   'hello': { 'world': { 'foo_bar': 'Hello World' } }
+convert(){
+  local env_var=$@
+  local split=(${env_var//=/ })
+  local env_var_name=${split[0]}
+  unset split[0]
+  local env_var_value=${split[@]}
+  local var_string="{ "
+  local splitted_name=(${env_var_name//_/ })
+  for parent in ${splitted_name[@]}; do
+    parent=${parent/-/_}
+    var_string="${var_string}\"${parent,,}\": { "
+  done
+  var_string=$(echo ${var_string:0:${#var_string}-2})
+  var_string="${var_string} \"${env_var_value//[\"\']/}\""
+  n=0; while (( n++ < ${#splitted_name[@]} )); do
+    var_string="${var_string} }"
+  done
+  echo $var_string
+}
+
+# Fusion two json strings
+# Example:
+#   string1='{ 'one': { 'two': { 'three': 'ok' } } }'
+#   string2='{ 'one': { 'two': { 'four': 'ko' } } }'
+#   json_merge $string1 $string2 #=> { 'one': { 'two': { 'three': 'ok', 'four': 'ko' } } }
+json_merge(){
+  local string1=$1
+  local string2=$2
+  ruby -e "require 'json'; def json_merge(one, two); JSON.parse(one).merge(JSON.parse(two)) { |key, old, new| json_merge(old.to_json.to_s, new.to_json.to_s) }; end; puts json_merge('${string1}', '${string2}').to_json"
+}
+
 # Clone or update the chaos chef repository
-if [ -d <%= CHAOS_CHEF_REPO_DIR %>/.git ]; then
-  cd <%= CHAOS_CHEF_REPO_DIR %>
-  git pull origin <%= CHAOS_CHEF_REPO_BRANCH || "master" %> &> /dev/null
-else
-  mkdir -p <%= CHAOS_LIB %>
-  mkdir -p <%= CHAOS_SERVER_CHEF_ROLES_DIR %>
-  cd <%= CHAOS_LIB %>
-  git clone -b <%= CHAOS_CHEF_REPO_BRANCH || "master" %> <%= CHAOS_CHEF_REPO %> &> /dev/null
-fi
+update_chef_repo(){
+  if [ -d <%= CHAOS_CHEF_REPO_DIR %>/.git ]; then
+    cd <%= CHAOS_CHEF_REPO_DIR %>
+    git pull origin <%= CHAOS_CHEF_REPO_BRANCH || "master" %> &> /dev/null
+  else
+    mkdir -p <%= CHAOS_LIB %>
+    mkdir -p <%= CHAOS_SERVER_CHEF_ROLES_DIR %>
+    cd <%= CHAOS_LIB %>
+    git clone -b <%= CHAOS_CHEF_REPO_BRANCH || "master" %> <%= CHAOS_CHEF_REPO %> &> /dev/null
+  fi
+}
+
+# Generate a json config for all environments variables configured by buildpacks
+load_buildpacks_env(){
+  env="{}"
+  for servicepack in <%= SERVICEPACKS_DIR %>/*; do
+    local env_file="$servicepack/env"
+    if [ -f $env_file ]; then
+      content=$(cat $env_file)
+      for env_var in $content; do
+        env=$(json_merge "$env" "$(convert $env_var)")
+      done
+    fi
+  done
+}
+
+# Read the roles configured for this server and generate a chef ready config string
+get_roles_list(){
+  roles_list=$(for role in $(cat <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/*); do echo -n "\"role[${role}]\", "; done)
+  roles_list=$(echo ${roles_list:0:${#roles_list}-2})
+}
 
 # Generate a node.json from registered roles
-roles_list=$(for role in $(cat <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/*); do echo -n "\"role[${role}]\", "; done)
-roles_list=$(echo ${roles_list:0:${#roles_list}-2})
+generate_node_config(){
+  load_buildpacks_env
+  get_roles_list
 
-node=$(cat << EOF
+  local env_line=""
+  if [ $env != '{}' ]; then 
+    env_line="${env:1:${#env}-2},"
+  fi
+
+  local node=$(cat << EOF
 {
+  ${env_line}
   "run_list": [ ${roles_list} ]
 }
 EOF
 )
 
-echo "$node" > <%= CHAOS_CHEF_NODE_PATH %>
+  echo "$node" > <%= CHAOS_CHEF_NODE_PATH %>
+}
 
 # Run chef
-chef-solo --no-color --config /var/lib/chaos/chaos-chef-repo/solo.rb --json-attributes <%= CHAOS_CHEF_NODE_PATH %> --force-formatter --log_level error
+run_chef(){
+  chef-solo --no-color --config <%= CHAOS_CHEF_REPO_DIR %>/solo.rb --json-attributes <%= CHAOS_CHEF_NODE_PATH %> --force-formatter --log_level error
+}
+
+update_chef_repo
+generate_node_config
+run_chef
