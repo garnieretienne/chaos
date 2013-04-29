@@ -2,9 +2,18 @@
 set -e
 
 # Build a gateway executing servicepacks binaries over ssh
+# The gateway will first try to load env file (servicepack_name/env) if it exist
+
+command=$@
+env_file="<%= SERVICEPACKS_DIR %>/<%= name %>/env"
+
 gateway=$(cat << EOF
-  command=\$@
-  ssh -oStrictHostKeyChecking=no -n addons@<%= provider %> <%= SERVICEPACKS_DIR %>/<%= name %>/bin/\${command}
+command=\$@
+ssh -oStrictHostKeyChecking=no -n addons@srv1.yuweb.fr \$(cat << EOSSH
+\$(if [ -f $env_file ]; then cat $env_file; fi)
+<%= SERVICEPACKS_DIR %>/<%= name %>/bin/\${command}
+EOSSH
+)
 EOF
 )
 

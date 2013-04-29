@@ -21,7 +21,7 @@ module Chaos
       config[:unset] ||= []
       config[:set] ||= []
       config[:unset].each do |setting|
-        server.exec! "sed -n '/^#{setting}=.*$/!p' #{env_file} > #{TMP_DIR}/env_#{@name} && mv #{TMP_DIR}/env_#{@name} #{env_file}", sudo: config[:sudo], as: config[:as], error_msg: "Cannot write the environment config file"
+        server.exec! "if [ -f #{env_file} ]; then sed -n '/^#{setting}=.*$/!p' #{env_file} > #{TMP_DIR}/env_#{@name} && mv #{TMP_DIR}/env_#{@name} #{env_file}; fi", sudo: config[:sudo], as: config[:as], error_msg: "Cannot write the environment config file"
       end
       config[:set].each do |var|
         server.exec! "echo '#{var.chomp}' >> #{env_file}", sudo: config[:sudo], as: config[:as], error_msg: "Cannot write the environment config file"
