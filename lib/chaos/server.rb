@@ -60,6 +60,17 @@ module Chaos
       end
     end
 
+    # List and print setuped servicepacks.
+    def servicepacks
+      connect do
+        exit_status, stdout = exec "ls #{SERVICEPACKS_DIR}"
+        stdout.each_line do |service|
+          desc = exec! "#{SERVICEPACKS_DIR}/#{service.chomp}/bin/detect --about", error_msg: "Cannor read servicepack description for #{service}"
+          display_ "* #{desc.strip}"
+        end
+      end
+    end
+
     # Ask the user for its password on the server.
     def ask_user_password
       begin

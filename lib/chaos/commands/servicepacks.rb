@@ -51,10 +51,11 @@ module Chaos
         server.uninstall_servicepack name, options[:provider]
       end
 
-      desc "config NAME [VAR]", "Show or edit an the buildpack env file"
+      desc "config NAME [VAR]", "Show or edit the servicepack configuration"
       method_option :provider, aliases: "-p", desc: 'server which provide the service', required: true
       method_option :delete, aliases: "-d", desc: 'delete the env variable'
 
+      # Show or edit the servicepack configuration
       def config(name, var=nil)
         server = Chaos::Server.new "ssh://#{options[:provider]}"
 
@@ -73,6 +74,25 @@ module Chaos
           server.list_servicepack_config name
         end
       end
+
+      desc "list", "List servicepacks availables on the server"
+      method_option :server, aliases: "-s", desc: 'list addons availables on the server (installed servicepacks)'
+      method_option :provider, aliases: "-p", desc: 'list servicepacks availables on the server (setuped servicepacks)'
+
+      # List available addons on the server
+      def list
+        if options[:server]
+          server = Chaos::Server.new "ssh://#{options[:server]}"
+
+          display_ "Addons availables on '#{server}'...", :topic
+          server.addons
+        elsif options[:provider]
+          server = Chaos::Server.new "ssh://#{options[:provider]}"
+
+          display_ "Servicepacks availables on '#{server}'...", :topic
+          server.servicepacks
+        end
+      end      
     end
   end
 end
