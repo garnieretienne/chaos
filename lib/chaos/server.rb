@@ -307,6 +307,11 @@ module Chaos
       end
     end
 
+    # List servicepack config set by the user.
+    # Users can set environment variable to configure the servicepack behavior.
+    # Setted env vars are stored into an 'env' file at the root of the servicepack directory.
+    #
+    # @param name [String] name of the servicepack
     def list_servicepack_config(name)
       env_file = "#{SERVICEPACKS_DIR}/#{name}/env"
       connect do
@@ -322,6 +327,11 @@ module Chaos
       end
     end
 
+    # Set a config variable for a servicepack.
+    # The config var is added into an 'env' file at the root of the servicepack directory.
+    #
+    # @param name [String] name of the servicepack
+    # @param var [String] an environment variable in bash format (ex: FOO=bar)
     def set_servicepack_config(name, var)
       raise Chaos::Error, "Config var must be in bash format (NAME=value)" if !var.match /^.*=.*$/
 
@@ -334,6 +344,11 @@ module Chaos
       end
     end
 
+    # Unset a config variable for a servicepack.
+    # The config var is removed from the 'env' file at the root of the servicepack directory.
+    #
+    # @param name [String] name of the servicepack
+    # @param var [String] an environment variable name to unset (ex: FOO)
     def unset_servicepack_config(name, var)
       connect do
         var_name = var.split('=')[0]
