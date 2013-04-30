@@ -18,6 +18,9 @@ module Chaos
         display_ "Bootstrapping #{server}...", :topic
         server.bootstrap
 
+        display_ "Update the system...", :topic
+        server.system_update true
+
         display_ "Configure services using Chef...", :topic
         server.register_server_roles options[:roles]
         server.run_chef true
@@ -38,6 +41,12 @@ module Chaos
       def update
         server = Chaos::Server.new "ssh://#{options[:server]}"
         server.ask_user_password unless server.password?
+
+        display_ "Update the system...", :topic
+        server.system_update
+
+        display_ "Update servicepacks...", :topic
+        server.update_servicepacks
 
         display_ "Update server configuration using Chef...", :topic
         server.run_chef

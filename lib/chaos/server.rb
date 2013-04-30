@@ -48,6 +48,19 @@ module Chaos
       end
     end
 
+    # Update the system using the package manager.
+    #
+    # @param root [Boolean] is the user is root or need sudo command
+    def system_update(root=false)
+      connect do
+        display_ "updating the system using the package manager" do
+          exec! "apt-get update", sudo: !root, error_msg: "Cannot update the package manager database"
+          exec! "apt-get upgrade --yes", sudo: !root, error_msg: "Cannot update the system using the package manager"
+          'done'
+        end
+      end
+    end
+
     # List and print available addons.
     def addons
       raise Chaos::Error, "The specified server ('#{@host}') is not an app server" unless app_server?
@@ -185,7 +198,7 @@ module Chaos
     # Run `chef-solo` with the recipe configured into the chaos chef repository (CHAOS_CHEF_REPO).
     # The displayed output is splitted to better summarize the execution.
     #
-    # @param root [Boolean] is the user running chef root nor need sudo command
+    # @param root [Boolean] is the user running chef root or need sudo command
     def run_chef(root=false)
       connect do
         stdout, stderr = "", ""
@@ -233,7 +246,21 @@ module Chaos
     def setup_servicepack(name, git_url)
       connect do
         display_ "Setup servicepack from '#{git_url}'" do
-          script! template("setup_servicepack.sh", binding), sudo: true, error_msg: "Cannot install this buildpack"
+          script! template("setup_servicepack.sh", binding), sudo: true, error_msg: "Cannot install this servicepack"
+        end
+      end
+    end
+
+    # Update all servicepacks.
+    # It will pull update through git.
+    def update_servicepacks
+      connect do
+        exit_status, stdout = exec "ls #{SERVICEPACKS_DIR}"
+        stdout.each_line do |servicepack|
+          display_ "updating '#{servicepack.chomp}' servicepack" do
+            script! template("update_servicepack.sh", binding), sudo: true, error_msg: "Cannot update this servicepack"
+            'done'
+          end
         end
       end
     end

@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+SERVICEPACK_DIR=<%= "#{SERVICEPACKS_DIR}/#{servicepack.chomp}" %>
+
+cd $SERVICEPACK_DIR
+git pull origin master
