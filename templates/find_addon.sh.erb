@@ -1,15 +1,16 @@
 #!/bin/bash
-set -e
+
+exit_status=1
 
 # Search for an addon plan provider in the addons direcory
 for addon_path in <%= ADDONS_DIR %>/*; do
-  if [ -f ${addon_path}/detect ]; then
+  if [[ -f ${addon_path}/detect ]]; then
     detected=$(${addon_path}/detect <%= plan %>)
     if [[ $? == 0 ]]; then
       echo $(basename $addon_path)
-      exit 0
+      exit_status=0
     fi
   fi
 done
 
-exit 1
+exit $exit_status
