@@ -54,6 +54,8 @@ module Chaos
     # @example
     #   display_ "General topic", :topic                              # => ">>  General topic "    
     #   display_ "Simple message", :message                           # => "    Simple message "
+    #   display_ "live\n output\n", :live                             # => "    live"
+    #                                                                 # => "    output"
     #   display_ "command executed !", :remote                        # => "    $ command executed ! "
     #   display_ "Please enter an username: " :ask                    # => "??  Please enter an username: "
     #   display_ "Error: The remote server is not reachable", :error  # => "!!  Error: The remote server is not reachable "
@@ -71,6 +73,8 @@ module Chaos
         case type
         when :message
           msg = "    #{line.chomp} "
+        when :live
+          msg = "#{line.gsub("\n","\n    ")}"
         when :topic
           msg = ">>  #{line.chomp} "
         when :remote
@@ -86,7 +90,11 @@ module Chaos
           status = block.call
           print "(#{(status) ? status.chomp : 'done'})\n"
         else
-          puts msg
+          if type == :live
+            print msg
+          else
+            puts msg
+          end
         end
       end
     end

@@ -202,10 +202,12 @@ module Chaos
     def run_chef(root=false)
       connect do
         stdout, stderr = "", ""
+        print "    "
         script template("run_chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
 
           data.each_line do |line|
-            display_ line if line =~ /^(\s\s\*.*|\w.*)/
+            display_ line, :live if stream == :stdout &&
+            #if line =~ /^(\s\s\*.*|\w.*)/
             case stream
             when :stdout
               stdout << data
@@ -219,6 +221,7 @@ module Chaos
             raise Chaos::RemoteError.new(stdout, stderr, exit_status, script_path), "Chef encountered an error" if exit_status != 0
           end
         end
+        print "\r"
       end
     end
 
