@@ -55,7 +55,7 @@ module Chaos
         exit_status, stdout = exec "ls #{ADDONS_DIR}"
         stdout.each_line do |addon|
           desc = exec! "#{ADDONS_DIR}/#{addon.chomp}/detect --about", error_msg: "Cannor read addon description for #{addon}"
-          display_ "* #{desc}"
+          display_ "* #{desc.strip}"
         end
       end
     end
@@ -223,7 +223,6 @@ module Chaos
       connect do
         display_ "Setup servicepack from '#{git_url}'" do
           script! template("setup_servicepack.sh", binding), sudo: true, error_msg: "Cannot install this buildpack"
-          'done'
         end
       end
     end
@@ -267,7 +266,7 @@ module Chaos
           exec! "mkdir ~/addons/#{name}; scp #{SERVICEPACKS_USER}@#{provider}:/#{SERVICEPACKS_DIR}/#{name}/bin/detect #{ADDONS_DIR}/#{name}/detect", as: DEPLOY_USER
           'done'
         end
-        
+
         display_ "Build the ssh gateway to service provider" do
           script! template("build_ssh_gateway.sh", binding), as: DEPLOY_USER, error_msg: "Cannot build the ssh gateway"
           'done'

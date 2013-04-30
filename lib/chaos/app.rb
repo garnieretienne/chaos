@@ -113,8 +113,8 @@ module Chaos
       @server.connect do
         display_ "Ask the application processes to stop" do
           pid_file = "#{@home}/packages/current/tmp/pids/starter.pid"
-          exit_code, stdout = @server.exec "ls #{pid_file}"
-          if exit_code == 0
+          exit_status, stdout = @server.exec "ls #{pid_file}"
+          if exit_status == 0
             @server.exec! "kill $(cat #{pid_file})", as: @name, error_msg: "Cannot kill master pid"
             'done'
           else
@@ -130,10 +130,10 @@ module Chaos
         display_ "Ask the application processes to start" do
           pid_file = "#{@home}/packages/current/tmp/pids/starter.pid"
           current_package_dir = "#{@home}/packages/current"
-          exit_code, stdout = @server.exec "ls #{current_package_dir}"
-          if exit_code == 0
-            exit_code, stdout = @server.exec "cat #{pid_file}"
-            if exit_code != 0
+          exit_status, stdout = @server.exec "ls #{current_package_dir}"
+          if exit_status == 0
+            exit_status, stdout = @server.exec "cat #{pid_file}"
+            if exit_status != 0
               @server.exec! "cd #{current_package_dir}; HOME=#{current_package_dir} #{STARTER_PATH}", as: @name, error_msg: "Cannot start application"
               'done'
             else
