@@ -206,8 +206,7 @@ module Chaos
         script template("run_chef.sh", binding), sudo: !root do |ch, stream, data, script_path|
 
           data.each_line do |line|
-            display_ line, :live if stream == :stdout &&
-            #if line =~ /^(\s\s\*.*|\w.*)/
+            display_ line, :live if stream == :stdout
             case stream
             when :stdout
               stdout << data
