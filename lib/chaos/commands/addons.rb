@@ -37,15 +37,19 @@ module Chaos
         app.remove_addon plan  
       end
 
-      desc "list", "List addons available on the server"
+      desc "list", "List addons subscribed by an app"
       method_option :server, aliases: "-s", desc: 'server on which the app is hosted', required: true
+      method_option :name, aliases: "-n", desc: 'name of the app'
 
-      # List available addons on the server
+      # List addons subscribed by an app
       def list
         server = Chaos::Server.new "ssh://#{options[:server]}"
 
-        display_ "Addons available on '#{server}'...", :topic
-        server.addons
+        name = options[:name] || File.basename(Dir.pwd)
+        app = Chaos::App.new name, server
+
+        display_ "Addons subscribed by '#{app}' on '#{server}'...", :topic
+        app.addons
       end      
     end
   end

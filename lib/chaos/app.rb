@@ -20,6 +20,16 @@ module Chaos
       @name
     end
 
+    # List addons subscribed by the app
+    def addons
+      @server.connect do
+        exit_status, stdout = @server.exec "ls #{@home}/config"
+        stdout.each_line do |addon|
+          display_ addon if addon.chomp != 'env'
+        end
+      end
+    end
+
     # Create the application environment on the attached server.
     # That will create a special user and home directory, declare an HTTP route, 
     # create a database and it access and finnally a git repo to deploy using git.
