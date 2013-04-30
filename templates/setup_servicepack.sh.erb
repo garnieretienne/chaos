@@ -14,7 +14,9 @@ refresh_role_link(){
 register_role(){
   rm -f <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/<%= name %>
   for role in <%= SERVICEPACKS_DIR %>/<%= name %>/vendor/chef/roles/*; do
-    echo $(basename ${role%.json*}) >> <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/<%= name %>
+    if [ -f "$role" ]; then
+      echo $(basename ${role%.json*}) >> <%= CHAOS_SERVER_CHEF_ROLES_DIR %>/<%= name %>
+    fi
   done
 }
 
