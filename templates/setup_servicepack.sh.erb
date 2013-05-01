@@ -20,6 +20,18 @@ register_role(){
   done
 }
 
+# Create an empty env file
+create_env_file(){
+  touch <%= SERVICEPACKS_DIR %>/<%= name %>/env
+  chown <%= SERVICEPACKS_USER %>:<%= SERVICEPACKS_USER %> <%= SERVICEPACKS_DIR %>/<%= name %>/env
+}
+
+# Create the tmp directory
+create_tmp_dir(){
+  mkdir <%= SERVICEPACKS_DIR %>/<%= name %>/tmp
+  chown <%= SERVICEPACKS_USER %>:<%= SERVICEPACKS_USER %> <%= SERVICEPACKS_DIR %>/<%= name %>/tmp
+}
+
 # Clone or refresh the buildpack directory and link its roles into the chaos chef repo role folder.
 if ls <%= SERVICEPACKS_DIR %>/<%= name %> &> /dev/null; then
   cd <%= SERVICEPACKS_DIR %>/<%= name %>
@@ -29,9 +41,8 @@ if ls <%= SERVICEPACKS_DIR %>/<%= name %> &> /dev/null; then
   echo "updated"
 else
   git clone <%= git_url %> <%= SERVICEPACKS_DIR %>/<%= name %>  &> /dev/null
-  if [ -d "<%= SERVICEPACKS_DIR %>/<%= name %>/tmp" ]; then
-    chown -R <%= SERVICEPACKS_USER %>:<%= SERVICEPACKS_USER %> <%= SERVICEPACKS_DIR %>/<%= name %>/tmp
-  fi
+  create_env_file
+  create_tmp_dir
   refresh_role_link
   register_role
   echo "done"
