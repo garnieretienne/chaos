@@ -13,11 +13,14 @@ gem install chaos-X.X.X.gem
 ## Usage
 
 ```
-Tasks:
-  chaos bootstrap -s, --ssh=SSH     # Bootstrap a server
-  chaos create -s, --server=SERVER  # Create an application on the server
-  chaos help [TASK]                 # Describe available tasks or one specific task
-  chaos update -s, --server=SERVER  # Update a server configuration running chef
+Commands:
+  chaos addons          # Manage app addons
+  chaos app             # Manage app deployment configuration
+  chaos config          # Manage app config vars
+  chaos domains         # Manage app domains
+  chaos help [COMMAND]  # Describe available commands or one specific command
+  chaos server          # Manage server configuration
+  chaos servicepacks    # Manage services offering addons on servers
 ```
 
 ## Contributing
