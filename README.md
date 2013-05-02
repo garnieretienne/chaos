@@ -23,6 +23,12 @@ Commands:
   chaos servicepacks    # Manage services offering addons on servers
 ```
 
+## Links (Chaos components)
+
+* [Hermes HTTP routes manager for Nginx](https://github.com/garnieretienne/chaos_hermes)
+* [PostgreSQL Servicepack](https://github.com/garnieretienne/chaos-servicepack-postgresql)
+* [Redis Servicepack](https://github.com/garnieretienne/chaos-servicepack-redis)
+
 ## Contributing
 
 1. Fork it
