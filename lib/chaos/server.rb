@@ -196,7 +196,6 @@ module Chaos
     end
 
     # Run `chef-solo` with the recipe configured into the chaos chef repository (CHAOS_CHEF_REPO).
-    # The displayed output is splitted to better summarize the execution.
     #
     # @param root [Boolean] is the user running chef root or need sudo command
     def run_chef(root=false)
