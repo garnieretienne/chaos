@@ -1,0 +1,1 @@
+ENV["RAKE_ENV"] = "testing"

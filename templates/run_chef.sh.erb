@@ -37,10 +37,15 @@ json_merge(){
 }
 
 # Clone or update the chaos chef repository
+# In testing environment, do not try to update the repository.
 update_chef_repo(){
   if [ -d <%= CHAOS_CHEF_REPO_DIR %>/.git ]; then
+    <% if ENV["RAKE_ENV"] != 'testing' %>
     cd <%= CHAOS_CHEF_REPO_DIR %>
     git pull origin <%= CHAOS_CHEF_REPO_BRANCH || "master" %> &> /dev/null
+    <% else %>
+    :
+    <% end %>
   else
     mkdir -p <%= CHAOS_LIB %>
     mkdir -p <%= CHAOS_SERVER_CHEF_ROLES_DIR %>
