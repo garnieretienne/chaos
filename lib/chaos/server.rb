@@ -468,7 +468,19 @@ module Chaos
       exit_status, stdout, stderr, cmd = exec(cmd, options)
       error_msg = options[:error_msg] || "The following command exited with an error"
       raise Chaos::RemoteError.new(stdout, stderr, exit_status, cmd), error_msg if exit_status != 0
-      return stdout
+      return stdout.chomp
+    end
+
+    # Exec a command on the server (need to be connected) and return a boolean representing the command status,
+    # 
+    # @param cmd [String] the command to execute
+    # @param options [Hash] the options for the command executions
+    # @option options [Boolean] :sudo run the command with sudo
+    # @option options [String] :as run the command as the given user (use sudo)
+    # @return [Boolean] true if the command exited with an exit code of 0
+    def exec?(cmd, options={})
+      exit_status, stdout, stderr, cmd = exec(cmd, options)
+      return (exit_status == 0)
     end
 
     # Execute a script on the remote host. 
